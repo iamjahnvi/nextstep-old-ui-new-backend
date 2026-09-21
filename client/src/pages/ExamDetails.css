@@ -1,0 +1,512 @@
+/* ExamDetails — replicates exam-detail.html inside the MainPage design system.
+   Uses the shared dx-page tokens (background, card, borders, navy/blue) so the
+   consistent dx-topbar + dark mode keep working. */
+
+.ed-wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 36px 26px 80px;
+}
+
+.ed-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 28px;
+  margin-top: 22px;
+  align-items: start;
+}
+
+.ed-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ed-breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 0;
+  align-self: flex-start;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dx-soft);
+}
+
+.ed-breadcrumb:hover {
+  color: var(--dx-ink);
+}
+
+/* ---- hero ---- */
+
+.ed-hero {
+  position: relative;
+  overflow: hidden;
+  background: var(--dx-card);
+  border: 1px solid var(--dx-border);
+  border-radius: 18px;
+  padding: 38px 40px 34px;
+  box-shadow: 0 1px 2px rgba(14, 27, 51, 0.04);
+}
+
+.ed-hero::before {
+  content: "";
+  position: absolute;
+  top: -70px;
+  right: -70px;
+  width: 260px;
+  height: 260px;
+  background: var(--dx-cream-2);
+  border-radius: 50%;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.ed-hero__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  position: relative;
+}
+
+.ed-hero__id {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.ed-badge {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  background: var(--dx-blue-bg);
+  color: var(--dx-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.ed-hero__title {
+  margin: 0;
+  font-size: 27px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: var(--dx-ink);
+}
+
+.ed-hero__fullname {
+  margin: 6px 0 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--dx-ink-2);
+}
+
+.ed-hero__actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.ed-iconbtn {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--dx-border);
+  background: var(--dx-card);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dx-soft);
+  cursor: pointer;
+}
+
+.ed-iconbtn:hover {
+  color: var(--dx-ink);
+  border-color: var(--dx-ink);
+}
+
+.ed-iconbtn.is-saved {
+  color: var(--dx-navy);
+  border-color: var(--dx-navy);
+}
+
+.ed-hero__desc {
+  position: relative;
+  margin: 24px 0 0;
+  max-width: 62ch;
+  font-size: 14.5px;
+  line-height: 1.8;
+  color: var(--dx-ink-2);
+}
+
+.ed-pills {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 26px;
+}
+
+.ed-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 15px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.ed-pill--neutral {
+  background: var(--dx-chip-bg);
+  color: var(--dx-ink-2);
+}
+
+.ed-pill__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.ed-pill--open {
+  background: var(--dx-blue-bg);
+  color: var(--dx-blue);
+}
+
+.ed-pill--upcoming {
+  background: var(--dx-green-bg);
+  color: var(--dx-green);
+}
+
+.ed-pill--closed {
+  background: #fbeae7;
+  color: #c2483b;
+}
+
+.dx-page--dark .ed-pill--closed {
+  background: rgba(242, 82, 82, 0.14);
+  color: #f08a80;
+}
+
+/* ---- cards ---- */
+
+.ed-card {
+  background: var(--dx-card);
+  border: 1px solid var(--dx-border);
+  border-radius: 18px;
+  padding: 34px 40px;
+  box-shadow: 0 1px 2px rgba(14, 27, 51, 0.04);
+  margin-top: 26px;
+}
+
+.ed-card--tight {
+  padding: 20px;
+  margin-top: 0;
+}
+
+.ed-side .ed-card + .ed-card {
+  margin-top: 16px;
+}
+
+.ed-card__title {
+  margin: 0 0 6px;
+  font-size: 16.5px;
+  font-weight: 700;
+  color: var(--dx-ink);
+}
+
+.ed-card__sub {
+  margin: 0 0 30px;
+  font-size: 13px;
+  color: var(--dx-faint);
+}
+
+.ed-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  row-gap: 30px;
+  column-gap: 40px;
+}
+
+.ed-info__label {
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--dx-faint);
+}
+
+.ed-info__value {
+  margin: 10px 0 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--dx-ink);
+}
+
+.ed-info--full {
+  grid-column: 1 / -1;
+}
+
+.ed-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ed-tag {
+  background: var(--dx-lilac-bg);
+  color: var(--dx-lilac);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 8px;
+}
+
+/* ---- registration ---- */
+
+.ed-reg-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ed-reg-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  background: var(--dx-chip-bg);
+  border-radius: 12px;
+  padding: 22px 20px;
+}
+
+.ed-reg-row__label {
+  font-size: 13.5px;
+  color: var(--dx-ink-2);
+  flex-shrink: 0;
+}
+
+.ed-reg-row__value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--dx-ink);
+  text-align: right;
+}
+
+.ed-reg-row .ed-status {
+  margin-top: 0;
+}
+
+.ed-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ed-status__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.ed-status--open {
+  background: var(--dx-blue-bg);
+  color: var(--dx-blue);
+}
+
+.ed-status--upcoming {
+  background: var(--dx-green-bg);
+  color: var(--dx-green);
+}
+
+.ed-status--closed {
+  background: #fbeae7;
+  color: #c2483b;
+}
+
+.dx-page--dark .ed-status--closed {
+  background: rgba(242, 82, 82, 0.14);
+  color: #f08a80;
+}
+
+.ed-cta {
+  display: flex;
+  gap: 12px;
+  margin-top: 30px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.ed-cta__primary {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Same hover/click response as the card "View details" button: the arrow
+   is hidden until hover, when it slides out to the right. Size, background
+   and text colour stay the button's own. */
+.ed-cta .ed-cta__arrow {
+  display: inline-block;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transform: translateX(-6px);
+  transition: max-width 0.25s ease, opacity 0.2s ease, transform 0.25s ease, margin 0.25s ease;
+  margin-left: 0;
+  line-height: 1;
+}
+
+.ed-cta__primary:hover .ed-cta__arrow {
+  max-width: 20px;
+  opacity: 1;
+  transform: translateX(0);
+  margin-left: 2px;
+}
+
+.ed-cta__primary:active {
+  transform: scale(0.98);
+}
+
+/* "Back to discovery": same idea, mirrored — its ← arrow sits on the left,
+   hidden until hover when it slides out leftwards. Scoped to this row so
+   ghost buttons elsewhere are untouched. */
+.ed-cta__back {
+  display: inline-flex;
+  align-items: center;
+}
+
+.ed-cta__back .ed-cta__arrow--left {
+  margin-left: 0;
+  margin-right: 0;
+  transform: translateX(6px);
+}
+
+.ed-cta__back:hover .ed-cta__arrow--left {
+  max-width: 20px;
+  opacity: 1;
+  transform: translateX(0);
+  margin-left: 0;
+  margin-right: 6px;
+}
+
+.ed-cta__back:active {
+  transform: scale(0.98);
+}
+
+/* ---- right rail ---- */
+
+.ed-side {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 82px;
+}
+
+.ed-rail__title {
+  margin: 0 0 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--dx-ink);
+}
+
+.ed-rail__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  padding: 9px 0;
+  border-top: 1px solid var(--dx-border);
+}
+
+.ed-rail__row:first-of-type {
+  border-top: none;
+}
+
+.ed-rail__label {
+  color: var(--dx-ink-2);
+  flex-shrink: 0;
+}
+
+.ed-rail__val {
+  font-weight: 600;
+  color: var(--dx-ink);
+  text-align: right;
+}
+
+.ed-track {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.ed-track__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dx-green);
+  flex-shrink: 0;
+}
+
+.ed-track__dot.is-pending {
+  background: var(--dx-border);
+}
+
+.ed-track__text {
+  font-size: 12.5px;
+  color: var(--dx-ink-2);
+}
+
+/* ---- responsive ---- */
+
+@media (max-width: 960px) {
+  .ed-wrap {
+    max-width: 720px;
+  }
+
+  .ed-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .ed-side {
+    position: static;
+  }
+}
+
+@media (max-width: 600px) {
+  .ed-wrap {
+    padding: 22px 16px 56px;
+  }
+
+  .ed-hero,
+  .ed-card {
+    padding: 26px 22px;
+  }
+
+  .ed-info-grid {
+    grid-template-columns: 1fr;
+  }
+}

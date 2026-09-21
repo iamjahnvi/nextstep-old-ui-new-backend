@@ -1,0 +1,374 @@
+// =============================================================================
+// scraper/extractors/eligibility.js
+// =============================================================================
+// WHAT: Rule-based eligibility extraction from prepared text into the
+//   tri-state Eligibility shape from validators/examValidator.js.
+// WHY: Eligibility must be evidenced, never assumed. Each axis starts UNKNOWN
+//   (via buildUnknownEligibility) and flips to KNOWN only on an explicit
+//   textual signal; genuinely ambiguous signals are left UNKNOWN rather than
+//   recorded as NEEDS_VERIFICATION noise — except DOB-cutoff age phrasing,
+//   where the fact is real but not an int, so NEEDS_VERIFICATION is honest.
+// VALUE MAPS: education levels stay engine-owned (canonical closed set,
+// aligned with server/utils/educationLevels.js via a local copy so the
+// scraper never imports server code). Stream and subject vocabularies are
+// ADAPTER-owned (registry `streamVocabulary` / `subjectVocabulary`): the
+// engine below only matches configured phrases and records configured
+// canonical values. No vocab configured -> the axis stays UNKNOWN; values
+// outside the configured vocab are never guessed.
+//   - education minLevel: "8" | "10" | "12" | "Graduate" | "Post-Graduate" |
+//     "Doctorate". Multi-category rule (generic): every distinct signaled
+//     level is collected. ONE distinct level -> KNOWN (the single-category
+//     case). SEVERAL distinct levels -> the schema holds a single minLevel
+//     and cannot represent alternatives, so minLevel stays null/UNKNOWN and
+//     the per-category excerpts are preserved in one LOW-confidence evidence
+//     entry — the ambiguity stays visible instead of collapsing to a guessed
+//     "most demanding" bar, and UNKNOWN is never "not eligible".
+//   - percentage min: number 0–100. percentage: KNOWN requires a value.
+//   - age min/max: ints. DOB cutoffs ("born on or after …") with no ints →
+//     NEEDS_VERIFICATION with null values.
+//   - stream allowed: canonical values from the adapter vocabulary, evidenced
+//     by configured match phrases.
+//   - subjects requiredAny: canonical values from the adapter vocabulary,
+//     parsed from explicit "with X, Y and Z" requirement lists.
+// CONTRACT:
+//   extractEligibility(text, ctx, vocab) -> full eligibility object.
+//   ctx: provenance + extractor tag (defaults to "eligibility.v1").
+//   vocab: { subjectVocabulary, streamVocabulary } — arrays of
+//     { canonical, match[] } (registry VocabEntrySchema). Missing/empty
+//     means the axis stays UNKNOWN; nothing is invented.
+//   Each adopted axis carries { status, evidence }; untouched axes keep
+//   { status: "UNKNOWN", evidence: null }. One exception: multi-category
+//   education is UNKNOWN *with* evidence — the preserved category excerpts
+//   are the ambiguity signal, and UNKNOWN never means "not eligible".
+// =============================================================================
+
+const { buildUnknownEligibility } = require("../validators/examValidator");
+const { buildEvidence } = require("./evidence");
+
+const EXTRACTOR_TAG = "eligibility.v1";
+
+const EDUCATION_RANK = {
+  8: 8,
+  10: 10,
+  11: 11,
+  12: 12,
+  Graduate: 15,
+  "Post-Graduate": 16,
+  Doctorate: 17,
+};
+
+// Signal order is irrelevant: distinct levels are collected and decided on
+// as a set (see the multi-category rule in the header).
+const EDUCATION_SIGNALS = [
+  { level: "Doctorate", re: /\b(ph\.?\s*d\.?|doctorate)\b/i },
+  { level: "Post-Graduate", re: /\b(post[\s-]?graduat\w*|master'?s?\s+degree|m\.?\s?tech\b|m\.?\s?sc\b)/i },
+  { level: "Graduate", re: /\b(graduat\w*|bachelor'?s?\s+degree|b\.?\s?tech\b|b\.?\s?sc\b|\bug\b(?!.*diagnos))/i },
+  { level: "12", re: /(\b10\s*\+\s*2\b|\b12\s?th\b|\bclass\s*12\b|\bclass\s*XII\b|higher\s+secondary|senior\s+secondary|intermediate\s+(?:education|exam)|hsc\b)/i },
+  { level: "11", re: /(\b11\s?th\b|\bclass\s*XI\b)/i },
+  { level: "10", re: /(\b10\s?th\b|\bclass\s*10\b|\bclass\s*X\b|matriculation|secondary\s+school(?!.*higher)|ssc\s+(?:exam|board))/i },
+  { level: "8", re: /(\b8\s?th\b|\bclass\s*8\b|elementary\s+education)/i },
+];
+
+const APPEARING_RE = /\b(appearing|appeared)\b.{0,60}\b(candidates?|students?|applicants?)\b.{0,60}\b(eligible|apply|appear)\b|\bfinal\s+year\b.{0,40}\beligible\b/i;
+
+const PERCENTAGE_RES = [
+  // Minimum/at-least figure anchored to marks within the same clause.
+  // The anchor is load-bearing: reservation and impairment percentages
+  // ("5% seats", "at least 40% impairment") appear in nearly every Indian
+  // bulletin and must never read as qualifying marks.
+  /(?:minimum|at\s+least|not\s+less\s+than)\s+(\d{1,3}(?:\.\d+)?)\s*%(?=[^.]{0,60}?(?:marks|aggregate))/i,
+  /(?:secured?|obtained?|scored?)(?:\s+a)?\s+(?:minimum|at\s+least\s+of\s+)?\s*(\d{1,3}(?:\.\d+)?)\s*%/i,
+  /(\d{1,3}(?:\.\d+)?)\s*%\s+(?:marks|aggregate|in\s+aggregate)/i,
+];
+
+const AGE_MIN_RES = [
+  /minimum\s+age\s*(?:is|:)?\s*(\d{1,2})/i,
+  /lower\s+age\s+limit\s*(?:is|:)?\s*(\d{1,2})/i,
+  /at\s+least\s+(\d{1,2})\s*years?\s+old/i,
+];
+const AGE_MAX_RES = [
+  /maximum\s+age\s*(?:is|:)?\s*(\d{1,2})/i,
+  /upper\s+age\s+limit\s*(?:is|:)?\s*(\d{1,2})/i,
+];
+const AGE_SPAN_RE = /age\s+limit\s*(\d{1,2})\s*(?:to|-|–)\s*(\d{1,2})/i;
+const DOB_CUTOFF_RE = /born\s+on\s+or\s+(?:after|before)\s+[^\n.]{3,80}/i;
+
+// Escape a vocab phrase so it matches literally inside a built pattern.
+function escapePhrase(phrase) {
+  return String(phrase).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Normalize the adapter vocabularies into engine-ready matchers. Malformed
+// input fails safe to empty vocabularies (UNKNOWN, never invented).
+function vocabEntries(vocab, key) {
+  const list = vocab && Array.isArray(vocab[key]) ? vocab[key] : [];
+  return list.filter(
+    (entry) =>
+      entry &&
+      typeof entry.canonical === "string" &&
+      entry.canonical.trim() !== "" &&
+      Array.isArray(entry.match) &&
+      entry.match.some((p) => typeof p === "string" && p.trim() !== "")
+  );
+}
+
+// Case-insensitive substring search returning the match index, or -1.
+function findPhrase(collapsed, phrase) {
+  return collapsed.toLowerCase().indexOf(String(phrase).toLowerCase());
+}
+
+function collapse(text) {
+  return String(text || "").replace(/\s+/g, " ").trim();
+}
+
+function windowAround(collapsed, index, length = 120) {
+  const start = Math.max(0, index - length);
+  return collapsed.slice(start, index + length + 200).trim();
+}
+
+function withCtx(ctx) {
+  return {
+    sourceUrl: ctx.sourceUrl,
+    documentUrl: ctx.documentUrl,
+    docType: ctx.docType,
+    retrievedAt: ctx.retrievedAt,
+    section: ctx.section,
+    extractor: (ctx && ctx.extractor) || EXTRACTOR_TAG,
+  };
+}
+
+function validPercentage(value) {
+  return Number.isFinite(value) && value >= 0 && value <= 100;
+}
+
+function validAge(value) {
+  return Number.isInteger(value) && value >= 0 && value <= 120;
+}
+
+function extractEligibility(text, ctx = {}, vocab = {}) {
+  const collapsed = collapse(text);
+  const base = withCtx(ctx);
+  const eligibility = buildUnknownEligibility();
+  if (!collapsed) return eligibility;
+
+  // --- education -----------------------------------------------------------
+  // Distinct signaled levels decide as a set: one -> KNOWN; several ->
+  // UNKNOWN with every category's excerpt preserved (schema cannot hold
+  // alternatives, so choosing any single level would invent a requirement).
+  const matchedLevels = [];
+  const seenLevels = new Set();
+  for (const signal of EDUCATION_SIGNALS) {
+    const match = signal.re.exec(collapsed);
+    if (match && !seenLevels.has(signal.level)) {
+      seenLevels.add(signal.level);
+      matchedLevels.push({
+        level: signal.level,
+        excerpt: windowAround(collapsed, match.index),
+      });
+    }
+  }
+  let appearingAllowed = null;
+  const appearingMatch = APPEARING_RE.exec(collapsed);
+  if (appearingMatch) appearingAllowed = true;
+
+  if (matchedLevels.length === 1) {
+    eligibility.education = {
+      minLevel: matchedLevels[0].level,
+      maxLevel: null,
+      appearingAllowed,
+      status: "KNOWN",
+      evidence: buildEvidence(base, {
+        confidence: "MEDIUM",
+        excerpt: matchedLevels[0].excerpt,
+      }),
+    };
+  } else if (matchedLevels.length > 1) {
+    const combined = matchedLevels
+      .sort((a, b) => EDUCATION_RANK[a.level] - EDUCATION_RANK[b.level])
+      .map((m) => `[${m.level}] ${m.excerpt}`)
+      .join(" | ");
+    eligibility.education = {
+      minLevel: null,
+      maxLevel: null,
+      appearingAllowed,
+      status: "UNKNOWN",
+      evidence: buildEvidence(base, {
+        confidence: "LOW",
+        excerpt: combined,
+      }),
+    };
+  } else if (appearingAllowed !== null) {
+    // "Appearing candidates may apply" with no stated bar: real but partial
+    // signal — flag for verification instead of inventing a minLevel.
+    eligibility.education = {
+      ...eligibility.education,
+      appearingAllowed,
+      status: "NEEDS_VERIFICATION",
+      evidence: buildEvidence(base, {
+        confidence: "LOW",
+        excerpt: windowAround(collapsed, appearingMatch.index),
+      }),
+    };
+  }
+
+  // --- percentage ----------------------------------------------------------
+  for (const re of PERCENTAGE_RES) {
+    const match = re.exec(collapsed);
+    if (match) {
+      const value = Number(match[1]);
+      if (validPercentage(value)) {
+        eligibility.percentage = {
+          min: value,
+          status: "KNOWN",
+          evidence: buildEvidence(base, {
+            confidence: "MEDIUM",
+            excerpt: windowAround(collapsed, match.index),
+          }),
+        };
+        break;
+      }
+    }
+  }
+
+  // --- age -----------------------------------------------------------------
+  let ageMin = null;
+  let ageMax = null;
+  let ageExcerpt = null;
+  const span = AGE_SPAN_RE.exec(collapsed);
+  if (span && validAge(Number(span[1])) && validAge(Number(span[2]))) {
+    ageMin = Number(span[1]);
+    ageMax = Number(span[2]);
+    ageExcerpt = windowAround(collapsed, span.index);
+  } else {
+    for (const re of AGE_MIN_RES) {
+      const match = re.exec(collapsed);
+      if (match && validAge(Number(match[1]))) {
+        ageMin = Number(match[1]);
+        ageExcerpt = windowAround(collapsed, match.index);
+        break;
+      }
+    }
+    for (const re of AGE_MAX_RES) {
+      const match = re.exec(collapsed);
+      if (match && validAge(Number(match[1]))) {
+        ageMax = Number(match[1]);
+        ageExcerpt = ageExcerpt || windowAround(collapsed, match.index);
+        break;
+      }
+    }
+  }
+  if (ageMin !== null || ageMax !== null) {
+    eligibility.age = {
+      min: ageMin,
+      max: ageMax,
+      asOfDate: null,
+      status: "KNOWN",
+      evidence: buildEvidence(base, {
+        confidence: "MEDIUM",
+        excerpt: ageExcerpt,
+      }),
+    };
+  } else {
+    const dob = DOB_CUTOFF_RE.exec(collapsed);
+    if (dob) {
+      eligibility.age = {
+        ...eligibility.age,
+        status: "NEEDS_VERIFICATION",
+        evidence: buildEvidence(base, {
+          confidence: "LOW",
+          excerpt: windowAround(collapsed, dob.index),
+        }),
+      };
+    }
+  }
+
+  // --- stream --------------------------------------------------------------
+  // Every configured entry whose phrases appear becomes allowed, in vocab
+  // order. No configured vocabulary (or no hit) -> UNKNOWN, never guessed.
+  const streamEntries = vocabEntries(vocab, "streamVocabulary");
+  const streamHits = [];
+  for (const entry of streamEntries) {
+    let at = -1;
+    for (const phrase of entry.match) {
+      if (typeof phrase !== "string" || phrase.trim() === "") continue;
+      const index = findPhrase(collapsed, phrase);
+      if (index !== -1 && (at === -1 || index < at)) at = index;
+    }
+    if (at !== -1) streamHits.push({ canonical: entry.canonical, index: at });
+  }
+  if (streamHits.length > 0) {
+    streamHits.sort((a, b) => a.index - b.index);
+    const firstAt = streamHits[0].index;
+    const seen = new Set();
+    const allowed = [];
+    for (const hit of streamHits) {
+      if (!seen.has(hit.canonical)) {
+        seen.add(hit.canonical);
+        allowed.push(hit.canonical);
+      }
+    }
+    eligibility.stream = {
+      allowed,
+      status: "KNOWN",
+      evidence: buildEvidence(base, {
+        confidence: "MEDIUM",
+        excerpt: windowAround(collapsed, firstAt),
+      }),
+    };
+  }
+
+  // --- subjects ------------------------------------------------------------
+  // The configured subject phrases form one explicit "with X, Y and Z"
+  // requirement list. Tokens map back to their entry canonicals (first
+  // entry wins on collisions); anything outside the vocab stays UNKNOWN.
+  const subjectEntries = vocabEntries(vocab, "subjectVocabulary");
+  const phraseToCanonical = new Map();
+  for (const entry of subjectEntries) {
+    for (const phrase of entry.match) {
+      if (typeof phrase !== "string" || phrase.trim() === "") continue;
+      const key = phrase.toLowerCase();
+      if (!phraseToCanonical.has(key)) phraseToCanonical.set(key, entry.canonical);
+    }
+  }
+  const subjectAlts = [...phraseToCanonical.keys()]
+    .sort((a, b) => b.length - a.length)
+    .map(escapePhrase);
+  if (subjectAlts.length > 0) {
+    const altGroup = `(?:${subjectAlts.join("|")})`;
+    const listRe = new RegExp(
+      `with\\s+(${altGroup}(?:\\s*(?:,|and|&)\\s*${altGroup})*)`,
+      "i"
+    );
+    const subjectMatch = listRe.exec(collapsed);
+    if (subjectMatch) {
+      const names = [];
+      const seen = new Set();
+      const tokenRe = new RegExp(subjectAlts.join("|"), "gi");
+      let token;
+      while ((token = tokenRe.exec(subjectMatch[1])) !== null) {
+        const canonical = phraseToCanonical.get(token[0].toLowerCase());
+        if (canonical && !seen.has(canonical)) {
+          seen.add(canonical);
+          names.push(canonical);
+        }
+      }
+      if (names.length > 0) {
+        eligibility.subjects = {
+          requiredAny: names,
+          status: "KNOWN",
+          evidence: buildEvidence(base, {
+            confidence: "MEDIUM",
+            excerpt: windowAround(collapsed, subjectMatch.index),
+          }),
+        };
+      }
+    }
+  }
+
+  return eligibility;
+}
+
+module.exports = {
+  extractEligibility,
+  EXTRACTOR_TAG,
+};

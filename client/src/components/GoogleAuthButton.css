@@ -1,0 +1,37 @@
+/* ---------------------------------------------------------------------------
+   GoogleAuthButton — invisible official-button overlay.
+   HOW: .google-auth-wrap keeps the page's custom button visuals; the GIS
+     iframe rendered into .google-auth-overlay sits on top with opacity 0,
+     so the real click always hits Google's supported button (account
+     chooser guaranteed). WHY: prompt()/One Tap gets suppressed by browsers;
+     the official button does not.
+--------------------------------------------------------------------------- */
+.google-auth-wrap {
+    position: relative;
+    width: 100%;
+    margin-bottom: 12px;
+}
+
+.google-auth-wrap > button {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.google-auth-overlay {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.google-auth-overlay[hidden] {
+    display: none;
+    pointer-events: none;
+}
+
+.google-auth-overlay > div,
+.google-auth-overlay iframe {
+    width: 100% !important;
+    height: 100% !important;
+}

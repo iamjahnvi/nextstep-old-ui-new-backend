@@ -1,0 +1,215 @@
+/* ---------------------------------------------------------------------------
+   FilterSelect — visually matches the old native .dx-select boxes, but the
+   option list is an absolutely-positioned panel anchored BELOW the trigger,
+   so it always opens downward and floats above the content underneath.
+   Soft open animation, no gimmicks.
+--------------------------------------------------------------------------- */
+.fs {
+  position: relative;
+  min-width: 0;
+}
+
+.fs__btn {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  border: 1px solid #e7ecf2;
+  border-radius: 10px;
+  padding: 7px 12px 8px;
+  background: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.fs__btn:hover {
+  border-color: #c3ccd8;
+}
+
+.fs__btn[aria-expanded="true"] {
+  border-color: #2f7cf6;
+  box-shadow: 0 0 0 3px rgba(47, 124, 246, 0.15);
+}
+
+.fs__label {
+  font-size: 11px;
+  color: #8a97ab;
+}
+
+.fs__value {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding-top: 2px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0e1b33;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fs__chev {
+  flex-shrink: 0;
+  color: #5b6b82;
+  transition: transform 0.15s ease;
+}
+
+.fs__chev.is-open {
+  transform: rotate(180deg);
+}
+
+.fs--compact .fs__btn {
+  flex-direction: row;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 9px;
+}
+
+.fs--compact .fs__value {
+  padding-top: 0;
+  font-weight: 500;
+  color: #5b6b82;
+  gap: 10px;
+}
+
+/* The list sizes to its content (up to a viewport-safe cap) instead of
+   matching the trigger width, so long options display in full. Right
+   alignment keeps edge-column lists inside the viewport. */
+.fs__list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: auto;
+  width: max-content;
+  min-width: 100%;
+  max-width: min(380px, calc(100vw - 32px));
+  z-index: 900;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #e7ecf2;
+  border-radius: 12px;
+  box-shadow: 0 16px 40px -12px rgba(14, 27, 51, 0.25);
+  max-height: 260px;
+  overflow-y: auto;
+  animation: fs-pop 0.12s ease both;
+  transform-origin: top center;
+}
+
+.fs__list--right {
+  left: auto;
+  right: 0;
+}
+
+@keyframes fs-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fs__list button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: #33415c;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.fs__list button:hover {
+  background: #f2f5f9;
+  color: #0e1b33;
+}
+
+.fs__list button.is-selected {
+  background: #e7f0fd;
+  color: #0e1b33;
+  font-weight: 700;
+}
+
+.fs__tick {
+  color: #2f7cf6;
+  font-weight: 800;
+}
+
+/* Dark theme when hosted on the dark main page. */
+:is(.dx-page--dark, .pf-page--dark) .fs__btn {
+  background: #141f36;
+  border-color: #26334f;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .fs__btn:hover {
+  border-color: #3b4a6b;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .fs__btn[aria-expanded="true"] {
+  border-color: #5f9dff;
+  box-shadow: 0 0 0 3px rgba(95, 157, 255, 0.2);
+}
+
+:is(.dx-page--dark, .pf-page--dark) .fs__label {
+  color: #6b7790;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .fs__value {
+  color: #e9eef7;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .fs__chev {
+  color: #98a4bb;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .fs--compact .fs__value {
+  color: #98a4bb;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .fs__list {
+  background: #141f36;
+  border-color: #26334f;
+  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.6);
+}
+
+:is(.dx-page--dark, .pf-page--dark) .fs__list button {
+  color: #c2ccdd;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .fs__list button:hover {
+  background: #1d2a45;
+  color: #e9eef7;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .fs__list button.is-selected {
+  background: rgba(47, 124, 246, 0.18);
+  color: #e9eef7;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .fs__tick {
+  color: #5f9dff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fs__list {
+    animation: none;
+  }
+}

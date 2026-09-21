@@ -1,0 +1,354 @@
+/* ---------------------------------------------------------------------------
+   ProfileMenu — top-bar avatar dropdown. White bordered panel, blue
+   completion ring, app type scale. No orange anywhere.
+--------------------------------------------------------------------------- */
+.pfm-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.pfm-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: #101f3c;
+  color: #fff;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  overflow: hidden;
+  padding: 0;
+  transition: box-shadow 0.15s ease;
+}
+
+.pfm-avatar:hover {
+  box-shadow: 0 0 0 3px rgba(47, 124, 246, 0.25);
+}
+
+.pfm-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pfm-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 300px;
+  max-width: calc(100vw - 32px);
+  background: #fff;
+  border: 1px solid #e7ecf2;
+  border-radius: 16px;
+  box-shadow: 0 24px 48px -16px rgba(14, 27, 51, 0.28);
+  padding: 18px;
+  z-index: 60;
+  animation: pfm-pop 0.14s ease both;
+  transform-origin: top right;
+}
+
+@keyframes pfm-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.pfm-head {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.pfm-photo {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  flex-shrink: 0;
+}
+
+.pfm-photo__face {
+  position: absolute;
+  inset: 10px;
+  border-radius: 50%;
+  background: #101f3c;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 800;
+  overflow: hidden;
+}
+
+.pfm-photo__face img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pfm-photo__pct {
+  position: absolute;
+  left: 50%;
+  bottom: -1px;
+  transform: translateX(-50%);
+  background: #fff;
+  border: 1px solid #e7ecf2;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #2f7cf6;
+  box-shadow: 0 2px 8px rgba(14, 27, 51, 0.1);
+  white-space: nowrap;
+}
+
+.pfm-head__text {
+  min-width: 0;
+}
+
+.pfm-name {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #0e1b33;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pfm-meta {
+  margin: 2px 0 8px;
+  font-size: 12.5px;
+  color: #8a97ab;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pfm-profile-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #2f7cf6;
+  cursor: pointer;
+}
+
+.pfm-profile-link:hover {
+  text-decoration: underline;
+}
+
+.pfm-div {
+  height: 1px;
+  background: #e7ecf2;
+  margin: 14px 0 8px;
+}
+
+.pfm-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: #33415c;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.pfm-row svg {
+  color: #5b6b82;
+  flex-shrink: 0;
+}
+
+.pfm-row:hover {
+  background: #f2f5f9;
+  color: #0e1b33;
+}
+
+/* FAQ modal */
+
+.pfm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(14, 27, 51, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: pfm-pop 0.14s ease both;
+}
+
+.pfm-modal {
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100svh - 60px);
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.pfm-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.pfm-modal__head h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #0e1b33;
+}
+
+.pfm-modal__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #5b6b82;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pfm-modal__close:hover {
+  background: #eef1f6;
+  color: #0e1b33;
+}
+
+.pfm-faq {
+  padding: 12px 0;
+  border-bottom: 1px solid #e7ecf2;
+}
+
+.pfm-faq:last-child {
+  border-bottom: none;
+}
+
+.pfm-faq__q {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0e1b33;
+}
+
+.pfm-faq__a {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #5b6b82;
+}
+
+/* Dark theme when hosted on the dark main page. */
+:is(.dx-page--dark, .pf-page--dark) .pfm-avatar {
+  background: #2f7cf6;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .pfm-panel {
+  background: #141f36;
+  border-color: #26334f;
+  box-shadow: 0 24px 48px -16px rgba(0, 0, 0, 0.6);
+}
+
+:is(.dx-page--dark, .pf-page--dark) .pfm-photo__face {
+  background: #2f7cf6;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .pfm-photo__pct {
+  background: #141f36;
+  border-color: #26334f;
+  color: #5f9dff;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .pfm-name {
+  color: #e9eef7;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .pfm-meta {
+  color: #6b7790;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .pfm-profile-link {
+  color: #5f9dff;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .pfm-div {
+  background: #26334f;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .pfm-row {
+  color: #c2ccdd;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .pfm-row svg {
+  color: #98a4bb;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .pfm-row:hover {
+  background: #1d2a45;
+  color: #e9eef7;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .pfm-modal {
+  background: #141f36;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .pfm-modal__head h2 {
+  color: #e9eef7;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .pfm-modal__close {
+  color: #98a4bb;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .pfm-modal__close:hover {
+  background: #1d2a45;
+  color: #e9eef7;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .pfm-faq {
+  border-bottom-color: #26334f;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .pfm-faq__q {
+  color: #e9eef7;
+}
+
+:is(.dx-page--dark, .pf-page--dark) .pfm-faq__a {
+  color: #98a4bb;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pfm-panel,
+  .pfm-modal-overlay {
+    animation: none;
+  }
+}

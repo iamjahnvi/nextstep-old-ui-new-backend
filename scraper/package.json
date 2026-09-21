@@ -1,0 +1,24 @@
+{
+  "name": "scraper",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test tests/rawDocumentStore.test.js tests/ingestionPipeline.test.js tests/registrationDates.test.js tests/eligibility.test.js tests/extractionPipeline.test.js tests/reviewPipeline.test.js tests/publishBoundary.test.js tests/publishExecutor.test.js tests/operatorCli.test.js tests/gate2026.test.js tests/adjudication.test.js tests/operatorAdjudication.test.js tests/lifecycleGate.test.js tests/pdfCleaning.test.js tests/adapterVocabulary.test.js tests/crawlPoliteness.test.js tests/sourceDrift.test.js tests/driftReport.test.js tests/adjudicationAxes.test.js tests/adjudicationHistory.test.js tests/jeeadvanced.test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "axios": "^1.20.0",
+    "cheerio": "^1.2.0",
+    "mongoose": "^9.10.1",
+    "pdf-parse": "^2.4.5",
+    "playwright": "^1.63.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^11.2.0"
+  }
+}

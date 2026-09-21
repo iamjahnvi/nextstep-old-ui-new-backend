@@ -1,0 +1,5 @@
+-add some motion to search thing that we do after putting filters.
+-when i cover on the top placed search bar, it is showing light blue coloured boundary around it, make it of the same colour as that of nextstep
+-also the above placed search bar should expand when i click on it and then i should be able to search
+-the transition of tab from one to another in navbar is not smooth, make it smooth
+-

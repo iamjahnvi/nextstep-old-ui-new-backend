@@ -1,0 +1,44 @@
+/* ---------------------------------------------------------------------------
+   ThemeToggle — circular top-bar button. Neutral by default; pages tune the
+   resting color through their own tokens, dark variants below.
+--------------------------------------------------------------------------- */
+.themetoggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #33415c;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.themetoggle:hover {
+  background: #eef1f6;
+  color: #0e1b33;
+}
+
+.themetoggle:active {
+  transform: scale(0.92);
+}
+
+.dx-page--dark .themetoggle,
+.pf-page--dark .themetoggle {
+  color: #8b97ae;
+}
+
+.dx-page--dark .themetoggle:hover,
+.pf-page--dark .themetoggle:hover {
+  background: #1a2540;
+  color: #e6ebf4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .themetoggle:active {
+    transform: none;
+  }
+}
