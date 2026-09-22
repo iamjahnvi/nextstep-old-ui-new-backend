@@ -5,7 +5,6 @@
 // WHY: All JEE-specific knowledge lives in this one declarative file. The
 //   generic engine (fetchers / parsers / extractors / validators) reads it and
 //   does the work, so adding the next exam means adding a config, not a scraper.
-//
 // VALUE PROVENANCE (moved out of code, nothing invented):
 //   - officialWebsite / startUrls  <- scraper/index.js (hardcoded axios URL)
 //   - fullForm / conductingBody    <- scraper/extractors/basicInfo.js
@@ -26,6 +25,7 @@
 
 module.exports = {
   slug: "jee-main",
+  // unique short identifier for the exam
   name: "JEE Main",
   fullForm: "Joint Entrance Examination (Main)",
   conductingBody: "National Testing Agency (NTA)",
@@ -34,10 +34,18 @@ module.exports = {
   startUrls: ["https://jeemain.nta.nic.in/"],
   // "js": official site returns HTTP 403 to plain HTTP clients (verified
   // Phase 1 live run), so the engine must use the browser fetcher here.
+  // this jee main official website refuses req made by a basic HTTP Client.
+  // for example , if our scraper uses something like fetch/axios then it will show this error. on the other hand, chrome/playwright can sometimes access it becz it behaves more like a browser.
+
   render: "js",
+  // js" means use the browser/Playwright fetcher
 
   docRules: [
-    { label: "information-bulletin", match: ["information bulletin"], type: "PDF" },
+    { 
+      label: "information-bulletin", 
+      match: ["information bulletin"], 
+      type: "PDF" 
+    },
   ],
 
   sections: [
@@ -65,6 +73,8 @@ module.exports = {
     { canonical: "Mathematics", match: ["mathematics", "maths", "math"] },
     { canonical: "Biology", match: ["biology"] },
     { canonical: "Computer Science", match: ["computer science"] },
+
+    // Canonical generally means the standard, official, or normalized form of something.
   ],
 
   streamVocabulary: [{ canonical: "Science", match: ["science stream"] }],

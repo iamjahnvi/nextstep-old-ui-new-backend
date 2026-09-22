@@ -26,6 +26,7 @@ const basicInfo = require("./extractors/basicInfo");
 const { parsePDFBuffer } = require("./parsers/pdfParser");
 const extractSection = require("./extractors/pdfSections");
 const cleanPDFText = require("./normalizers/pdfText");
+
 const {
   validateExam,
   validateExamEdition,

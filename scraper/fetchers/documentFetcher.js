@@ -23,12 +23,22 @@
 //     { label, url, sourceUrl, type, fetchedAt, status, contentType, content }
 //     content is a Buffer for PDF, a string otherwise.
 // =============================================================================
-
+// Crawler = the part that travels around the website and fetches the stuff.
 const { fetchHTML, fetchBinary } = require("./httpFetcher");
 const { fetchViaBrowser, fetchBinaryViaBrowser } = require("./browserFetcher");
 
+// These are the two ways the scraper can fetch content:
+// HTTP fetcher   → normal HTTP request
+// Browser fetcher → Playwright/browser request
+
 function crawlFetchOptions(adapter) {
+// It receives an exam adapter/config. For example:
+// adapter.crawl = {
+//   timeoutMs: 30000,
+//   maxRetries: 3
+// }
   const crawl = (adapter && adapter.crawl) || {};
+  // Get adapter.crawl; if it doesn't exist, use {} instead.
   const opts = {};
   if (crawl.timeoutMs !== undefined && crawl.timeoutMs !== null) {
     opts.timeout = crawl.timeoutMs;
@@ -46,13 +56,21 @@ function crawlDelayMs(adapter) {
 }
 
 async function fetchDocument(discovered, adapter) {
+  // This function is the document downloader. It takes a document that was already discovered and actually fetches it. 
   if (!discovered || typeof discovered.url !== "string") {
+    // Makes sure we actually have a valid URL.
+    // If not → throws an error.
     throw new Error("documentFetcher: discovered document has no url");
   }
   const useBrowser =
     adapter && adapter.render === "js" ? true : false;
+    // as the function name sugggests that if render is js then true, use browser otherwise no, don't use browser.
+
   const fetchedAt = new Date();
+  // Stores when the document was fetched.
+
   const fetchOpts = crawlFetchOptions(adapter);
+  // Gets things like: timeout and max retries, from the adapter.
 
   if (discovered.type === "PDF") {
     const res = useBrowser
@@ -90,3 +108,19 @@ module.exports = {
   crawlFetchOptions,
   crawlDelayMs,
 };
+
+// Discovered document
+//        ↓
+//    fetchDocument()
+//        ↓
+//  Is it PDF?
+//    /      \
+//  YES       NO
+//   ↓         ↓
+// PDF fetch  HTML fetch
+//   \         /
+//    \       /
+//     ↓     ↓
+// Standard document object
+//         ↓
+//      PARSER

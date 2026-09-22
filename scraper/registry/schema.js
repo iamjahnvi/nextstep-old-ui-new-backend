@@ -27,15 +27,25 @@ const { z } = require("zod");
 // (.pdf → PDF) and defaults to HTML.
 const DocRuleSchema = z
   .object({
+
     label: z.string().min(1),
+    // the value of label must be a string and it's minimum value should be 1 char, atleast.
+
     match: z.array(z.string().min(1)).default([]),
+
     matchUrl: z.array(z.string().min(1)).default([]),
+
     type: z.enum(["HTML", "PDF", "OTHER"]).optional(),
+    // .enum means the value must be one of the listed options.
   })
+
   .strict()
+  // we write .strict() because it tells zod to reject extra fields that i didn't define in the zod-schema.
+
   .refine((rule) => rule.match.length + rule.matchUrl.length > 0, {
     message: "docRule needs at least one match or matchUrl phrase",
   });
+  // .refine means after checking the normal rules, also check one extra my own customised rule.
 
 // One vocabulary entry for eligibility extraction: the canonical value the
 // engine records, plus the case-insensitive substring phrases that evidence
@@ -65,12 +75,20 @@ const SectionRuleSchema = z
 // null-filled object as an explicit `crawl: {}`.
 const CrawlConfigSchema = z
   .object({
+
     requestDelayMs: z.number().int().min(0).max(60000).nullable().default(null),
+    // How many milliseconds to wait between requests.
+    
     timeoutMs: z.number().int().min(1000).max(120000).nullable().default(null),
+    // How many milliseconds to wait between requests.
+
     maxRetries: z.number().int().min(0).max(5).nullable().default(null),
+    // How many times to retry if a request fails.
   })
   .strict()
   .default({ requestDelayMs: null, timeoutMs: null, maxRetries: null });
+
+  // CrawlConfigSchema is basically the rulebook for crawling/fetching settings.
 
 const SourceAdapterConfigSchema = z
   .object({
@@ -106,6 +124,13 @@ const SourceAdapterConfigSchema = z
 function validateAdapterConfig(config) {
   return SourceAdapterConfigSchema.safeParse(config);
 }
+
+// It means:
+
+// “Check whether this config follows the rules we defined in SourceAdapterConfigSchema.”
+// config → the actual exam configuration, e.g. JEE Main config.
+// SourceAdapterConfigSchema → the Zod rulebook.
+// .safeParse(config) → validates it without throwing an error
 
 module.exports = {
   DocRuleSchema,

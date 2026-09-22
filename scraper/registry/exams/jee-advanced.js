@@ -44,6 +44,8 @@ module.exports = {
 
   startUrls: ["https://jeeadv.ac.in/"],
   render: "static",
+  
+  // jeeadv.ac.in returns server-rendered HTML on plain HTTP 200 (verified 2026-09-20) — no JS shell, so no Playwright needed. Unlike JEE Main.jeeadv.ac.in returns server-rendered HTML on plain HTTP 200 (verified 2026-09-20) — no JS shell, so no Playwright needed. Unlike JEE Main.
 
   docRules: [
     {
