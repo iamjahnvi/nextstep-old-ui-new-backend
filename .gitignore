@@ -27,3 +27,8 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# STEP 0 benchmark outputs (regenerable, machine-dependent)
+scraper/benchmarks/results/baseline.*.json
+# STEP 1 shadow-comparison outputs (regenerable, machine-dependent)
+scraper/benchmarks/results/crawlee-shadow.*.json
