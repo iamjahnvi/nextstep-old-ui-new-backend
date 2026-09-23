@@ -51,9 +51,22 @@ function summarizeRawDocument(doc) {
       ? doc.content.slice(0, 8).toString("latin1")
       : String(doc.content).slice(0, 200),
   };
+// Function: Creates a small summary of a downloaded document for logging/debugging.
+// It tells you:
+// what document it is
+// URL
+// PDF/HTML type
+// when it was fetched
+// HTTP status
+// whether content is a Buffer or text
+// content size
+// first few bytes/characters
+// Purpose: Quickly inspect “Did we actually download the right thing?”
 }
 
 async function scrape() {
+//   This is the main pipeline.
+// Everything happens inside this function in sequence.
   try {
     // 1. Registry: validate adapter config before doing anything else.
     const adapter = SourceAdapterConfigSchema.parse(jeeAdapterConfig);
@@ -177,3 +190,5 @@ async function scrape() {
 }
 
 scrape();
+
+// 
