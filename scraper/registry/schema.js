@@ -90,6 +90,12 @@ const CrawlConfigSchema = z
 
   // CrawlConfigSchema is basically the rulebook for crawling/fetching settings.
 
+// Maximum exact bulletin/document URLs one adapter may declare for the
+// Step 22 allowlist probe. Small by design: an allowlist is explicit trust,
+// not a crawl frontier. Shared with discovery/bulletinFallback.js so the
+// schema bound and the probe bound can never drift apart.
+const MAX_BULLETIN_URLS = 5;
+
 const SourceAdapterConfigSchema = z
   .object({
     // Stable exam identity (facts about the exam itself, not one edition).
@@ -111,6 +117,12 @@ const SourceAdapterConfigSchema = z
     // which subject/stream vocabularies eligibility extraction may recognize,
     // and how politely to crawl the source (all crawl fields optional).
     docRules: z.array(DocRuleSchema).default([]),
+    // Exact bulletin/document URLs the operator explicitly trusts for the
+    // Step 22 allowlist probe (probed, never crawled). Empty by default:
+    // no declaration means no allowlist candidates. Each entry must be an
+    // exact, complete URL — the engine never generates, mutates, or expands
+    // these (no guessing variants, no recursive discovery from them).
+    bulletinUrls: z.array(z.url()).max(MAX_BULLETIN_URLS).default([]),
     sections: z.array(SectionRuleSchema).default([]),
     cleanPatterns: z.array(z.string().min(1)).default([]),
     descriptionExclusions: z.array(z.string().min(1)).default([]),
@@ -137,6 +149,7 @@ module.exports = {
   SectionRuleSchema,
   VocabEntrySchema,
   CrawlConfigSchema,
+  MAX_BULLETIN_URLS,
   SourceAdapterConfigSchema,
   validateAdapterConfig,
 };

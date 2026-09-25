@@ -1,0 +1,14 @@
+# NextStep source surveillance — systemd service template (STEP 14).
+# Install: copy to /etc/systemd/system/nextstep-surveillance.service, replace
+# /srv/nextstep with the real checkout path and svc-nextstep with the service
+# user, then: systemctl daemon-reload
+# Type=oneshot: each trigger runs once and exits; overlapping triggers refuse
+# via the runExclusive() lock. Staging-only writes; never publishes.
+[Unit]
+Description=NextStep source surveillance (staging only, never publishes)
+
+[Service]
+Type=oneshot
+User=svc-nextstep
+WorkingDirectory=/srv/nextstep
+ExecStart=/usr/bin/node /srv/nextstep/scraper/cli/surveillance.js --limit 5 --persist

@@ -1,0 +1,8 @@
+# NextStep source surveillance — OS cron template (STEP 14).
+# Install: copy this line into the deployment user's crontab (crontab -e),
+# replacing /srv/nextstep with the real checkout path. Runs daily at 02:00,
+# checks up to 5 candidates, records staging state. Bounded by the CLI's own
+# --limit handling; overlapping ticks refuse via the runExclusive() lock.
+# Dry-run alternative (report only, zero writes):
+#   0 2 * * * /usr/bin/node /srv/nextstep/scraper/cli/surveillance.js --limit 5 --dry-run
+0 2 * * * /usr/bin/node /srv/nextstep/scraper/cli/surveillance.js --limit 5 --persist

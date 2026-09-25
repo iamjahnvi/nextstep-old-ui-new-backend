@@ -270,8 +270,8 @@ describe("STEP 2 — exam discovery", () => {
     assert.equal(EXAM_CANDIDATE_COLLECTION, "scraper_exam_candidates");
     assert.notEqual(EXAM_CANDIDATE_COLLECTION, EDITION_DRAFT_COLLECTION);
     assert.notEqual(EXAM_CANDIDATE_COLLECTION, "exams");
-    assert.deepEqual(CANDIDATE_STATUSES, ["DISCOVERED"]);
-    assert.ok(FUTURE_CANDIDATE_STATUSES.includes("SOURCE_VERIFIED"));
+    assert.deepEqual(CANDIDATE_STATUSES, ["DISCOVERED", "SOURCE_VERIFIED", "SOURCE_REVIEW_REQUIRED"]);
+    assert.ok(!CANDIDATE_STATUSES.includes("PUBLISHED"));
     assert.ok(FUTURE_CANDIDATE_STATUSES.includes("REJECTED"));
   });
 

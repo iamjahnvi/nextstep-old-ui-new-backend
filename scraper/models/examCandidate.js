@@ -23,13 +23,14 @@ const mongoose = require("mongoose");
 
 const EXAM_CANDIDATE_COLLECTION = "scraper_exam_candidates";
 
-// Step 2 reality: discovery may only create DISCOVERED candidates.
-const CANDIDATE_STATUSES = ["DISCOVERED"];
+// Step 3 reality: discovery creates DISCOVERED candidates; source
+// verification advances them to SOURCE_VERIFIED or SOURCE_REVIEW_REQUIRED
+// (discovery/sourceVerification.js only — never by discovery itself).
+const CANDIDATE_STATUSES = ["DISCOVERED", "SOURCE_VERIFIED", "SOURCE_REVIEW_REQUIRED"];
 
-// Lifecycle design for later steps (Step 3+). Listed here so future states
-// slot into the schema enum cleanly; NOT assignable by any Step 2 code path.
+// Lifecycle design for later steps (Step 4+). Listed here so future states
+// slot into the schema enum cleanly; NOT assignable by any current code path.
 const FUTURE_CANDIDATE_STATUSES = [
-  "SOURCE_VERIFIED",
   "PROFILED",
   "CRAWLED",
   "EXTRACTED",

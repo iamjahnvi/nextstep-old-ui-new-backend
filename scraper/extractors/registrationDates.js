@@ -21,6 +21,13 @@
 //     yield UNKNOWN for that field — with the competing excerpts preserved
 //     as LOW-confidence evidence instead of a guess. UNKNOWN beats a wrong
 //     official date, always.
+//   - REVISION CLUSTERS (STEP 18): several dates glued after ONE label with
+//     only whitespace/punctuation/weekday names between them are successive
+//     revisions — the LAST valid date wins at MEDIUM (never HIGH), so review
+//     always sees the pick. Sentence breaks, other words, or a BACKWARD time
+//     step end the cluster (a glued earlier date belongs to another event,
+//     e.g. a notice date — explicit preponement still works via revision
+//     verbs), keeping normal single-date behavior untouched.
 //   - Anything else (bare dates, contradictory ranges) is ignored — the
 //     pipeline records UNKNOWN rather than an invented window.
 // CONTRACT:
@@ -79,6 +86,47 @@ const END_STATEMENT_LABEL =
 
 const WINDOW_CHARS = 250;
 
+// Revision clusters (STEP 18 / BUG-1): official schedules append revisions
+// beside the original inside ONE cell or clause ("Sep 25 … Sep 28 … Oct 06 …
+// Oct 07") with only whitespace, punctuation, or weekday names between
+// consecutive dates. A run of 2+ such dates after one field label is a
+// revision cluster: entries supersede left to right, so the LAST valid date
+// is current. This is never recency-guessing across fields — only within one
+// undifferentiated cluster — and cluster picks carry MEDIUM (positional
+// linkage, not grammar) so review always sees them. Sentence boundaries and
+// any other words break the run, preserving normal single-date behavior.
+const CLUSTER_GLUE_RE = /^(?:[\s,;()]*?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)?[\s,;()]*?)+$/i;
+const CLUSTER_BREAK_RE = /[.!?]/;
+const CLUSTER_SPAN_CHARS = 200;
+
+function lastDateInCluster(collapsed, firstEnd, firstDate) {
+  DATE_GLOBAL_RE.lastIndex = firstEnd;
+  let last = null;
+  let cursor = firstEnd;
+  let floor = firstDate instanceof Date ? firstDate.getTime() : NaN;
+  try {
+    let match;
+    while ((match = DATE_GLOBAL_RE.exec(collapsed)) !== null) {
+      const gap = collapsed.slice(cursor, match.index);
+      if (CLUSTER_BREAK_RE.test(gap) || !CLUSTER_GLUE_RE.test(gap)) break;
+      if (match.index - firstEnd > CLUSTER_SPAN_CHARS) break;
+      const parsed = parseDateCandidate(match[0]);
+      if (!parsed) break;
+      // Revisions supersede forward in time. A backward step (e.g. a notice
+      // or publication date glued after the event date) ends the run — it
+      // belongs to a different event, not to this revision chain. Explicit
+      // preponement still works through revision-verb statements.
+      if (!Number.isNaN(floor) && parsed.getTime() < floor) break;
+      floor = parsed.getTime();
+      last = { date: parsed, end: match.index + match[0].length };
+      cursor = last.end;
+    }
+    return last;
+  } finally {
+    DATE_GLOBAL_RE.lastIndex = 0;
+  }
+}
+
 function collapse(text) {
   return String(text || "").replace(/\s+/g, " ").trim();
 }
@@ -88,16 +136,28 @@ function windowAround(text, index, length = 120) {
   return text.slice(start, index + length + 200).trim();
 }
 
-// First parseable date within `WINDOW_CHARS` after `index`.
+// First parseable date within `WINDOW_CHARS` after `index`; when it opens a
+// revision cluster, the LAST date of the cluster wins with clustered: true
+// (caller downgrades confidence — see the cluster rule above).
 function firstDateAfter(collapsed, index) {
   const window = collapsed.slice(index, index + WINDOW_CHARS);
   const match = window.match(DATE_RE);
   if (!match) return null;
   const parsed = parseDateCandidate(match[0]);
   if (!parsed) return null;
+  const firstEnd = index + match.index + match[0].length;
+  const cluster = lastDateInCluster(collapsed, firstEnd, parsed);
+  if (cluster) {
+    return {
+      date: cluster.date,
+      excerpt: windowAround(collapsed, index),
+      clustered: true,
+    };
+  }
   return {
     date: parsed,
     excerpt: windowAround(collapsed, index),
+    clustered: false,
   };
 }
 
@@ -124,6 +184,30 @@ function collectLabeled(collapsed, labelRe) {
   return out;
 }
 
+// A revision-statement capture that opens a date cluster resolves to the
+// cluster's last date at MEDIUM; single-date statements keep HIGH.
+// dateEndIndex is the end offset of the captured date text itself (the walk
+// continues from the date, not from the end of the whole statement match).
+function clusterAwareCapture(collapsed, dateEndIndex, dateText, excerptIndex) {
+  const parsed = parseDateCandidate(dateText);
+  if (!parsed) return null;
+  const cluster = lastDateInCluster(collapsed, dateEndIndex, parsed);
+  if (cluster) {
+    return {
+      date: cluster.date,
+      excerpt: windowAround(collapsed, excerptIndex),
+      confidence: "MEDIUM",
+    };
+  }
+  return null;
+}
+
+function capturedDateEnd(match, groupIndex) {
+  const text = match[groupIndex];
+  const start = match.index + match[0].lastIndexOf(text);
+  return start + text.length;
+}
+
 // Replacement dates stated through revision language tied to a field:
 // "<field> … revised/extended … <date>" or "<revised …> <field> … <date>",
 // each confined to one sentence-ish span. Returns [{ date, excerpt }].
@@ -138,13 +222,18 @@ function linkedReplacements(collapsed, statementLabel) {
     const re = new RegExp(source, "gi");
     let match;
     while ((match = re.exec(collapsed)) !== null) {
-      const parsed = parseDateCandidate(match[1]);
-      if (parsed) {
-        out.push({
-          date: parsed,
-          excerpt: windowAround(collapsed, match.index),
-          confidence: "HIGH",
-        });
+      const clustered = clusterAwareCapture(collapsed, capturedDateEnd(match, 1), match[1], match.index);
+      if (clustered) {
+        out.push(clustered);
+      } else {
+        const parsed = parseDateCandidate(match[1]);
+        if (parsed) {
+          out.push({
+            date: parsed,
+            excerpt: windowAround(collapsed, match.index),
+            confidence: "HIGH",
+          });
+        }
       }
       if (match.index === re.lastIndex) re.lastIndex += 1;
     }
@@ -170,13 +259,18 @@ function bareExtension(collapsed) {
       if (match.index === re.lastIndex) re.lastIndex += 1;
       continue;
     }
-    const parsed = parseDateCandidate(match[1]);
-    if (parsed) {
-      out.push({
-        date: parsed,
-        excerpt: windowAround(collapsed, match.index),
-        confidence: "MEDIUM",
-      });
+    const clustered = clusterAwareCapture(collapsed, capturedDateEnd(match, 1), match[1], match.index);
+    if (clustered) {
+      out.push(clustered);
+    } else {
+      const parsed = parseDateCandidate(match[1]);
+      if (parsed) {
+        out.push({
+          date: parsed,
+          excerpt: windowAround(collapsed, match.index),
+          confidence: "MEDIUM",
+        });
+      }
     }
     if (match.index === re.lastIndex) re.lastIndex += 1;
   }
@@ -197,7 +291,10 @@ function resolveKind(labeled, stated) {
         date: entry.date,
         excerpts: [],
         fromStatement: false,
-        confidence: "HIGH",
+        // A fresh slot opens at the sighting's own strength: plain labeled
+        // dates HIGH, revision-cluster picks MEDIUM. Later sightings never
+        // downgrade it (statement sightings may still upgrade it below).
+        confidence: fromStatement ? "HIGH" : confidence,
         statementExcerpt: null,
       });
     }
@@ -214,7 +311,10 @@ function resolveKind(labeled, stated) {
       slot.statementExcerpt = entry.excerpt;
     }
   };
-  for (const entry of labeled) add(entry, false, "HIGH");
+  // A clustered labeled hit arrives MEDIUM (positional linkage); the slot
+  // still keeps its strongest sighting, so a HIGH single-date sighting of
+  // the same date elsewhere is never downgraded by it.
+  for (const entry of labeled) add(entry, false, entry.clustered ? "MEDIUM" : "HIGH");
   for (const entry of stated) add(entry, true, entry.confidence);
 
   const distinct = [...slots.values()];
@@ -224,7 +324,10 @@ function resolveKind(labeled, stated) {
     return {
       date: only.date,
       finding: {
-        confidence: only.fromStatement ? only.confidence : "HIGH",
+        // The slot keeps its own linkage strength: plain labeled dates stay
+        // HIGH, while revision-cluster picks arrive MEDIUM (downgraded at
+        // capture) so review always sees them.
+        confidence: only.confidence,
         excerpt: only.fromStatement ? only.statementExcerpt : only.excerpts[0],
       },
     };

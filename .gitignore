@@ -32,3 +32,8 @@ lerna-debug.log*
 scraper/benchmarks/results/baseline.*.json
 # STEP 1 shadow-comparison outputs (regenerable, machine-dependent)
 scraper/benchmarks/results/crawlee-shadow.*.json
+# STEP 5 Python artifacts (regenerable)
+__pycache__/
+.pytest_cache/
+# STEP 15 live pilot outputs (live excerpts, machine-dependent, regenerable)
+scraper/pilot/results/*.json

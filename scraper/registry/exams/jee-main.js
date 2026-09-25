@@ -41,11 +41,26 @@ module.exports = {
   // js" means use the browser/Playwright fetcher
 
   docRules: [
-    { 
-      label: "information-bulletin", 
-      match: ["information bulletin"], 
-      type: "PDF" 
+    {
+      label: "information-bulletin",
+      match: ["information bulletin"],
+      type: "PDF"
     },
+  ],
+
+  // Step 22 allowlist: exact bulletin URLs the operator explicitly trusts.
+  // VALUE PROVENANCE (observed live, nothing invented — verified 2026-09-25
+  // by fetching https://jeemain.nta.nic.in/ through the browser transport and
+  // reading its anchors): the landing exposes an "Information Bulletin" link
+  // to this NTA CDN (s3waas.gov.in) PDF. The landing ALSO exposes an older
+  // October-2024 upload under the same anchor text; that stale previous-cycle
+  // URL is deliberately EXCLUDED — one exact current-cycle URL only.
+  // NOTE: the CDN host differs from jeemain.nta.nic.in, so same-domain-only
+  // discovery can never find it; the explicit declaration below is the trust
+  // decision, and the probe still validates reachability + PDF validity.
+  // Re-verify before trusting blindly in a new cycle (paths are opaque).
+  bulletinUrls: [
+    "https://cdnbbsr.s3waas.gov.in/s3f8e59f4b2fe7c5705bf878bbd494ccdf/uploads/2025/11/202511021649722475.pdf",
   ],
 
   sections: [

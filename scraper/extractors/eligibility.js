@@ -30,6 +30,11 @@
 //     by configured match phrases.
 //   - subjects requiredAny: canonical values from the adapter vocabulary,
 //     parsed from explicit "with X, Y and Z" requirement lists.
+// STEP 6 context (education only; other axes untouched): ordinal matches in
+//   date/age/pagination noise are suppressed via extractors/contextFilters
+//   before the set decision, and a lone match inside an ELIGIBILITY section
+//   (extractors/sections) carries HIGH confidence. Multi-level UNKNOWN,
+//   DOB handling, and percentage anchoring are unchanged.
 // CONTRACT:
 //   extractEligibility(text, ctx, vocab) -> full eligibility object.
 //   ctx: provenance + extractor tag (defaults to "eligibility.v1").
@@ -44,6 +49,8 @@
 
 const { buildUnknownEligibility } = require("../validators/examValidator");
 const { buildEvidence } = require("./evidence");
+const { filterEducationMatches } = require("./contextFilters");
+const { detectSections, sectionAt } = require("./sections");
 
 const EXTRACTOR_TAG = "eligibility.v1";
 
@@ -118,7 +125,14 @@ function findPhrase(collapsed, phrase) {
 }
 
 function collapse(text) {
-  return String(text || "").replace(/\s+/g, " ").trim();
+  // Collapse horizontal whitespace but preserve newlines: the section layer
+  // (sections.js) reads headings as lines, and all signal patterns already
+  // tolerate newlines via \s. Excerpts are normalized downstream by
+  // buildEvidence, so stored evidence keeps its single-line shape.
+  return String(text || "")
+    .replace(/[^\S\n]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 function windowAround(collapsed, index, length = 120) {
@@ -155,31 +169,69 @@ function extractEligibility(text, ctx = {}, vocab = {}) {
   // Distinct signaled levels decide as a set: one -> KNOWN; several ->
   // UNKNOWN with every category's excerpt preserved (schema cannot hold
   // alternatives, so choosing any single level would invent a requirement).
-  const matchedLevels = [];
-  const seenLevels = new Set();
+  // Step 6 context: matches inside date/age/pagination noise are suppressed
+  // before the set decision (an ordinal in "8th September, 2008" is a date,
+  // not a level), and a lone match inside an Eligibility section carries
+  // HIGH confidence instead of MEDIUM.
+  // Every occurrence of every signal is collected, then noise-suppressed
+  // occurrences are dropped and each level keeps its first clean one. A
+  // suppressed early hit ("8th" in a date) therefore never hides a genuine
+  // later one ("Class 8"); with no noise this is exactly the previous
+  // first-match behavior.
+  const rawLevels = [];
   for (const signal of EDUCATION_SIGNALS) {
-    const match = signal.re.exec(collapsed);
-    if (match && !seenLevels.has(signal.level)) {
-      seenLevels.add(signal.level);
-      matchedLevels.push({
+    const global = new RegExp(
+      signal.re.source,
+      signal.re.flags.includes("g") ? signal.re.flags : `${signal.re.flags}g`
+    );
+    let match = null;
+    while ((match = global.exec(collapsed)) !== null) {
+      if (match[0].length === 0) {
+        global.lastIndex += 1;
+        continue;
+      }
+      rawLevels.push({
         level: signal.level,
+        index: match.index,
+        length: match[0].length,
+        text: match[0],
         excerpt: windowAround(collapsed, match.index),
       });
     }
   }
+  const { kept: cleanLevels } = filterEducationMatches(collapsed, rawLevels);
+  const matchedLevels = [];
+  const seenLevels = new Set();
+  for (const entry of cleanLevels) {
+    if (!seenLevels.has(entry.level)) {
+      seenLevels.add(entry.level);
+      matchedLevels.push(entry);
+    }
+  }
+  const sections = detectSections(collapsed);
+  const sectionNameAt = (index) => {
+    const section = sectionAt(index, sections);
+    return section ? section.name : null;
+  };
   let appearingAllowed = null;
   const appearingMatch = APPEARING_RE.exec(collapsed);
   if (appearingMatch) appearingAllowed = true;
 
   if (matchedLevels.length === 1) {
+    const only = matchedLevels[0];
+    const home = sectionAt(only.index, sections);
+    const inEligibility = home !== null && home.axis === "ELIGIBILITY";
     eligibility.education = {
-      minLevel: matchedLevels[0].level,
+      minLevel: only.level,
       maxLevel: null,
       appearingAllowed,
       status: "KNOWN",
       evidence: buildEvidence(base, {
-        confidence: "MEDIUM",
-        excerpt: matchedLevels[0].excerpt,
+        confidence: inEligibility ? "HIGH" : "MEDIUM",
+        excerpt: only.excerpt,
+        // Surface the detected section only when the caller supplied none —
+        // pipeline/test contexts already carry the document label there.
+        section: base.section || sectionNameAt(only.index),
       }),
     };
   } else if (matchedLevels.length > 1) {

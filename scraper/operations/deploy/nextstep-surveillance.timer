@@ -1,0 +1,15 @@
+# NextStep source surveillance — systemd timer template (STEP 14).
+# Install: copy to /etc/systemd/system/nextstep-surveillance.timer, then:
+#   systemctl daemon-reload
+#   systemctl enable --now nextstep-surveillance.timer
+# Runs daily at 02:00; Persistent=true catches up after downtime with a
+# single run (no backlog storms — each run is bounded by --limit anyway).
+[Unit]
+Description=Run NextStep source surveillance daily
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target
