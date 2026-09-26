@@ -57,13 +57,16 @@ const surveillanceStateSchema = new mongoose.Schema(
 surveillanceStateSchema.index({ candidateId: 1, sourceUrl: 1 }, { unique: true });
 surveillanceStateSchema.index({ lastOutcome: 1 });
 
-function getSurveillanceStateModel(connection) {
+function getSurveillanceStateModel(connection, options = {}) {
   if (!connection || typeof connection.model !== "function") {
     throw new Error("getSurveillanceStateModel: a mongoose connection is required");
   }
+  const modelSchema = options.readOnly
+    ? surveillanceStateSchema.clone().set("autoIndex", false).set("autoCreate", false)
+    : surveillanceStateSchema;
   return connection.model(
     "ScraperSurveillanceState",
-    surveillanceStateSchema,
+    modelSchema,
     SURVEILLANCE_STATE_COLLECTION
   );
 }

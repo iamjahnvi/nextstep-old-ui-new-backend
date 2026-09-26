@@ -83,13 +83,16 @@ const examCandidateSchema = new mongoose.Schema(
 examCandidateSchema.index({ status: 1 });
 examCandidateSchema.index({ sourceDomain: 1 });
 
-function getExamCandidateModel(connection) {
+function getExamCandidateModel(connection, options = {}) {
   if (!connection || typeof connection.model !== "function") {
     throw new Error("getExamCandidateModel: a mongoose connection is required");
   }
+  const modelSchema = options.readOnly
+    ? examCandidateSchema.clone().set("autoIndex", false).set("autoCreate", false)
+    : examCandidateSchema;
   return connection.model(
     "ScraperExamCandidate",
-    examCandidateSchema,
+    modelSchema,
     EXAM_CANDIDATE_COLLECTION
   );
 }

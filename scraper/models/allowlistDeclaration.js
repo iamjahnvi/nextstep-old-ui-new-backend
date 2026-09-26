@@ -43,13 +43,16 @@ const allowlistDeclarationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-function getAllowlistDeclarationModel(connection) {
+function getAllowlistDeclarationModel(connection, options = {}) {
   if (!connection || typeof connection.model !== "function") {
     throw new Error("getAllowlistDeclarationModel: a mongoose connection is required");
   }
+  const modelSchema = options.readOnly
+    ? allowlistDeclarationSchema.clone().set("autoIndex", false).set("autoCreate", false)
+    : allowlistDeclarationSchema;
   return connection.model(
     "ScraperAllowlistDeclaration",
-    allowlistDeclarationSchema,
+    modelSchema,
     ALLOWLIST_DECLARATION_COLLECTION
   );
 }

@@ -7,6 +7,7 @@ import Profile from "./pages/Profile";
 import MainPage from "./pages/MainPage";
 import Recommendations from "./pages/Recommendations";
 import ExamDetails from "./pages/ExamDetails";
+import FreshnessDashboard from "./pages/FreshnessDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // NOTE: BrowserRouter + AuthProvider live in main.jsx (AuthContext needs
@@ -21,6 +22,7 @@ function App(){
         <Route path="/main" element={<ProtectedRoute><MainPage /></ProtectedRoute>}></Route>
         <Route path="/exams/:id" element={<ProtectedRoute><ExamDetails /></ProtectedRoute>}></Route>
         <Route path="/recommendations" element={<ProtectedRoute><Recommendations /></ProtectedRoute>}></Route>
+        <Route path="/freshness" element={<ProtectedRoute><FreshnessDashboard /></ProtectedRoute>}></Route>
       </Routes>
   ) ;
 }

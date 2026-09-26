@@ -42,11 +42,14 @@ const reviewStateSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-function getReviewStateModel(connection) {
+function getReviewStateModel(connection, options = {}) {
   if (!connection || typeof connection.model !== "function") {
     throw new Error("getReviewStateModel: a mongoose connection is required");
   }
-  return connection.model("ScraperReviewState", reviewStateSchema, REVIEW_STATE_COLLECTION);
+  const modelSchema = options.readOnly
+    ? reviewStateSchema.clone().set("autoIndex", false).set("autoCreate", false)
+    : reviewStateSchema;
+  return connection.model("ScraperReviewState", modelSchema, REVIEW_STATE_COLLECTION);
 }
 
 module.exports = {
