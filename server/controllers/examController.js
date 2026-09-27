@@ -3,6 +3,13 @@ const Exam = require("../models/Exam");
 const { isProfileComplete, filterEligibleExams } = require("../utils/eligibility");
 
 const {
+    applyManualEligibility,
+    addCustomEligibility,
+    updateCustomEligibility,
+    removeCustomEligibility,
+} = require("../services/examEligibilityService");
+
+const {
     getApplicationStatus,
     examOverlapsMonth,
     normalizeCareerType,
@@ -320,8 +327,81 @@ const getExamById = async (req  , res) => {
     }
 }
 
+// Manual eligibility correction (operator path — no admin dashboard exists,
+// so this protected endpoint plus examEligibilityService is the smallest
+// appropriate layer). Exactly one operation per request: either a common
+// field correction ({ field, value }) or a custom-criterion change
+// ({ custom: { action: "add"|"update"|"remove", ... } }). Every change is
+// stamped MANUAL in manualEdits via the service; scraper publishes only ever
+// CREATE new records and can never overwrite these corrections.
+const updateExamEligibility = async (req , res) => {
+    try {
+        const { id } = req.params;
+        const { field, value, note, custom } = req.body || {};
+        const operator = req.user && (req.user.email || String(req.user._id || "")) || "operator";
+
+        const exam = await Exam.findById(id);
+        if (!exam) {
+            return res.status(404).json({
+                success : false ,
+                message : "Exam not found" ,
+            });
+        }
+
+        if (custom !== undefined && custom !== null) {
+            const action = custom.action;
+            if (action === "add") {
+                addCustomEligibility(exam , {
+                    key : custom.key ,
+                    label : custom.label ,
+                    value : custom.value ,
+                    status : custom.status ,
+                    notes : custom.notes ,
+                    updatedBy : operator ,
+                });
+            } else if (action === "update") {
+                updateCustomEligibility(exam , custom.key , {
+                    label : custom.label ,
+                    value : custom.value ,
+                    status : custom.status ,
+                    notes : custom.notes ,
+                    updatedBy : operator ,
+                });
+            } else if (action === "remove") {
+                removeCustomEligibility(exam , custom.key , { updatedBy : operator , note });
+            } else {
+                return res.status(400).json({
+                    success : false ,
+                    message : "custom.action must be one of: add, update, remove" ,
+                });
+            }
+        } else {
+            if (field === undefined || field === null || field === "") {
+                return res.status(400).json({
+                    success : false ,
+                    message : "Provide { field, value } or { custom: { action, ... } }" ,
+                });
+            }
+            applyManualEligibility(exam , { field , value , updatedBy : operator , note });
+        }
+
+        await exam.save();
+
+        return res.status(200).json({
+            success : true ,
+            data : exam ,
+        });
+    } catch (error) {
+        return res.status(400).json({
+            success : false ,
+            message : error.message ,
+        });
+    }
+};
+
 module.exports = {
     recommendExams ,
     discoverExams ,
     getExamById,
+    updateExamEligibility,
 };

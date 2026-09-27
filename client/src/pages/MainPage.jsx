@@ -594,7 +594,12 @@ function MainPage() {
         const isSaved = Boolean(savedMap[exam._id]);
         const chips = [];
         if (exam.minimumEducationLevel !== undefined && exam.minimumEducationLevel !== null) {
-            chips.push(`Class ${exam.minimumEducationLevel}`);
+            const level = exam.minimumEducationLevel;
+            chips.push(
+                level === "Graduate" || level === "Post-Graduate" || level === "Doctorate"
+                    ? level
+                    : `Class ${level}`
+            );
         }
         if (Array.isArray(exam.streams) && exam.streams.length > 0) chips.push(exam.streams[0]);
         return (

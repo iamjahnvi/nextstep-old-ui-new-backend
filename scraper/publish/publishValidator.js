@@ -4,14 +4,18 @@
 // WHAT: Validates a mapped publish payload against the NextStep Exam
 //   requirements (mirrored from server/models/Exam.js — local zod schema, no
 //   server imports) plus the publish gate (draft must be VERIFIED).
-// WHY: The production schema is NOT weakened: required fields stay required.
-//   A VERIFIED draft with UNKNOWN essentials (null dates, null education) is
+// WHY: Core identity stays strict (name/fullForm/website/dates/education):
+//   a VERIFIED draft with UNKNOWN essentials (null dates, null education) is
 //   still unpublishable — the validator rejects it with useful errors instead
-//   of letting nulls reach production.
+//   of letting nulls reach production. But streams/subjects/age/percentage
+//   are NULLABLE by product decision (flexible-eligibility redesign): exams
+//   such as degree-level GATE carry no school-stream/subject gating, and null
+//   ("no confirmed requirement") must flow through instead of forcing invented
+//   values. Nullable is not weaker — invented values are what it prevents.
 // REJECTS:
 //   - non-VERIFIED drafts (DRAFT, REJECTED, missing status)
-//   - malformed required fields (empty name/fullForm/website, empty streams or
-//     subjects arrays — the Exam schema requires all of these)
+//   - malformed required fields (empty name/fullForm/website, null education,
+//     empty-when-present streams/subjects arrays)
 //   - invalid dates (unparseable, or end before start)
 //   - invalid education/eligibility values (unknown level, percentage outside
 //     0–100, negative age)
@@ -55,15 +59,36 @@ const RequiredDate = z
   .transform((v) => (v instanceof Date ? v : new Date(v)))
   .refine((d) => !Number.isNaN(d.getTime()), { message: "invalid date" });
 
+// One controlled custom criterion (mirrors server/models/Exam.js — local
+// copy, no server imports). Structured only: key/label/value required,
+// status/source from closed sets, free-text notes allowed. Displayable
+// without participating in any automated logic.
+const PublishCustomEligibilitySchema = z
+  .object({
+    key: z.string().min(1).regex(/^[a-z][a-zA-Z0-9]*$/),
+    label: z.string().min(1),
+    value: z.string().min(1),
+    status: z.enum(["CONFIRMED", "NEEDS_VERIFICATION", "NOT_APPLICABLE"]).optional(),
+    source: z.enum(["SEED", "SCRAPER", "MANUAL"]).optional(),
+    notes: z.string().nullable().optional(),
+    updatedBy: z.string().nullable().optional(),
+  })
+  .strict();
+
 const PublishExamSchema = z
   .object({
     name: z.string().min(1),
     fullForm: z.string().min(1),
     description: z.string().nullable().optional(),
-    minimumAge: z.number().int().min(0).nullable(),
+    minimumAge: z.number().int().min(0).nullable().optional(),
+    maximumAge: z.number().int().min(0).nullable().optional(),
     minimumEducationLevel: z.enum(PUBLISH_EDUCATION_LEVELS),
-    streams: z.array(z.string().min(1)).min(1),
-    subjects: z.array(z.string().min(1)).min(1),
+    // Nullable by product decision: null = "no confirmed requirement"
+    // (e.g. degree-level exams with no school-stream/subject gating).
+    // A PRESENT array must still be non-empty with non-empty entries —
+    // null passes, [] and [""] do not.
+    streams: z.array(z.string().min(1)).min(1).nullable().optional(),
+    subjects: z.array(z.string().min(1)).min(1).nullable().optional(),
     eligibility: z
       .object({
         minimumPercentage: z.number().min(0).max(100).nullable(),
@@ -71,18 +96,37 @@ const PublishExamSchema = z
       .strict()
       .nullable()
       .optional(),
+    customEligibility: z
+      .array(PublishCustomEligibilitySchema)
+      .optional()
+      .refine(
+        (entries) =>
+          !entries || new Set(entries.map((entry) => entry.key)).size === entries.length,
+        { message: "customEligibility keys must be unique" }
+      ),
     registrationStartDate: RequiredDate,
     registrationEndDate: RequiredDate,
     officialWebsite: z.url(),
     // Unclassified by product decision — null only (never a guessed value).
     careerType: z.null(),
     examType: z.null(),
-    // NOTE: no `month` by design (.strict() rejects it).
+    // Publish-path stamp (examMapper sets this): a record crossing this
+    // boundary is scraper-created, never seed-created. Required as a literal
+    // so the stamp cannot be dropped or forged to another origin here.
+    origin: z.literal("SCRAPER"),
+    // NOTE: no `month`, no `location` by design (.strict() rejects them).
   })
   .strict()
   .refine(
     (exam) => exam.registrationEndDate >= exam.registrationStartDate,
     { message: "registrationEndDate must be >= registrationStartDate" }
+  )
+  .refine(
+    (exam) =>
+      exam.maximumAge == null ||
+      exam.minimumAge == null ||
+      exam.maximumAge >= exam.minimumAge,
+    { message: "maximumAge must be >= minimumAge when both are present" }
   );
 
 function validatePublishRequest({ draft, payload } = {}) {

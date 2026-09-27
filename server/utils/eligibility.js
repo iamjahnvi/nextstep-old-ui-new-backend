@@ -42,10 +42,20 @@ const normalizeStream = (value) => {
 
 const isValidStream = (value) => normalizeStream(value) !== null;
 
+// NULL SEMANTICS (flexible-eligibility redesign): a null/undefined/empty
+// exam criterion means "no confirmed requirement" — the check is SKIPPED
+// (pass), never treated as "nobody eligible", "everybody eligible", or a
+// wildcard match. Rationale: an exam must not be rejected for a rule nobody
+// evidenced, and must not gain false specificity from one either.
+const hasUsableListRequirement = (value) => {
+    return Array.isArray(value) && value.some((entry) => typeof entry === "string" && entry.trim() !== "");
+};
+
 const examMatchesStream = (examStreams, userStream) => {
+    // No confirmed stream requirement -> criterion not evaluated (pass).
+    if (!hasUsableListRequirement(examStreams)) return true;
     const canonicalUserStream = normalizeStream(userStream);
     if (!canonicalUserStream) return false;
-    if (!Array.isArray(examStreams)) return false;
     const userLower = canonicalUserStream.toLowerCase();
     return examStreams.some((entry) => {
         if (typeof entry !== "string") return false;
@@ -217,6 +227,12 @@ const examSchoolSubjects = (exam) => {
 };
 
 const userMatchesExamSubjects = (userSubjects, exam) => {
+    // No confirmed subject requirement (null/empty/unusable) -> pass.
+    // examSchoolSubjects already yields [] for such exams; the explicit
+    // early return below documents the null contract in one place.
+    const rawSubjects = exam ? exam.subjects : null;
+    const rawStreams = exam ? exam.streams : null;
+    if (!hasUsableListRequirement(rawSubjects) && !hasUsableListRequirement(rawStreams)) return true;
     const required = examSchoolSubjects(exam);
     if (required.length === 0) return true; // exam names no school subject -> N/A
     const normalized = normalizeUserSubjects(userSubjects);
@@ -259,8 +275,10 @@ const isProfileComplete = (profile) => {
 
 const examMatchesEducation = (examMinimumEducationLevel, userEducationLevel) => {
     const examRank = getEducationRank(examMinimumEducationLevel);
+    // No confirmed education bar on the exam -> criterion not evaluated.
+    if (examRank === null) return true;
     const userRank = getEducationRank(userEducationLevel);
-    if (examRank === null || userRank === null) return false;
+    if (userRank === null) return false;
     return userRank >= examRank;
 };
 
@@ -275,13 +293,18 @@ const examMatchesPercentage = (exam, userPercentage) => {
 
 const examMatchesAge = (exam, userAge) => {
     const minimumAge = exam ? exam.minimumAge : null;
-    if (minimumAge === undefined || minimumAge === null) return true;
+    const maximumAge = exam ? exam.maximumAge : null;
+    // No confirmed age bounds -> criterion not evaluated (pass).
+    if ((minimumAge === undefined || minimumAge === null) &&
+        (maximumAge === undefined || maximumAge === null)) return true;
     // Age is optional on the profile: without a verified age the user cannot
     // satisfy an age-gated exam, so it is excluded (other exams still match).
     if (userAge === undefined || userAge === null || userAge === "") return false;
     const age = Number(userAge);
     if (!Number.isFinite(age)) return false;
-    return age >= Number(minimumAge);
+    if (minimumAge !== undefined && minimumAge !== null && age < Number(minimumAge)) return false;
+    if (maximumAge !== undefined && maximumAge !== null && age > Number(maximumAge)) return false;
+    return true;
 };
 
 // -----------------------------------------------------------------------------
@@ -321,6 +344,11 @@ const getAgeFromProfile = (profile, now = new Date()) => {
 };
 
 const isEligibleForExam = (exam, profile) => {
+    // NOTE: only the core structured criteria gate eligibility (education,
+    // stream, percentage, age bounds, subjects). Extended common fields
+    // (eligibility.nationality, domicile, ...) and customEligibility entries
+    // are display-only until a future implementation wires them in — they
+    // must never silently filter anyone out.
     if (!exam || !profile) return false;
     if (!examMatchesEducation(exam.minimumEducationLevel, profile.educationLevel)) return false;
     if (!examMatchesStream(exam.streams, profile.stream)) return false;
@@ -339,6 +367,7 @@ module.exports = {
     CANONICAL_STREAMS,
     normalizeStream,
     isValidStream,
+    hasUsableListRequirement,
     examMatchesStream,
     normalizeUserSubjects,
     canonicalizeSubject,

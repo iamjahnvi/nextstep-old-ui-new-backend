@@ -13,6 +13,7 @@
 //   exam.fullForm              → fullForm
 //   (not extracted)            → description: null
 //   eligibility.age.min        → minimumAge (KNOWN only, else null)
+//   eligibility.age.max        → maximumAge (KNOWN only, else null)
 //   eligibility.education      → minimumEducationLevel (KNOWN minLevel, else null)
 //   eligibility.stream.allowed → streams (KNOWN only, else null)
 //   eligibility.subjects       → subjects (KNOWN requiredAny, else null)
@@ -20,6 +21,9 @@
 //   edition.registration       → registrationStartDate / registrationEndDate
 //   exam.officialWebsite       → officialWebsite
 //   (fixed)                    → careerType: null, examType: null (unclassified)
+//   (fixed)                    → origin: "SCRAPER" (publish-path stamp; the
+//     Exam schema default is SEED, so without this every scraper-published
+//     record would misreport its provenance)
 //   (never)                    → NO month field (derived app-side from dates)
 //   Draft-only data (year, cycle, evidence, raw refs) does NOT go into the
 //   exam shape — it is returned separately as `provenance` for identity.
@@ -53,6 +57,7 @@ function mapDraftToExamPayload(draft) {
     fullForm: exam.fullForm ?? null,
     description: null,
     minimumAge: knownValue(eligibility.age, (axis) => axis.min ?? null),
+    maximumAge: knownValue(eligibility.age, (axis) => axis.max ?? null),
     minimumEducationLevel: knownValue(
       eligibility.education,
       (axis) => axis.minLevel ?? null
@@ -74,6 +79,7 @@ function mapDraftToExamPayload(draft) {
     officialWebsite: exam.officialWebsite ?? null,
     careerType: null,
     examType: null,
+    origin: "SCRAPER",
   };
 
   const provenance = {

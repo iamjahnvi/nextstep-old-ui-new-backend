@@ -166,6 +166,68 @@ describe("Phase 5 — extractRegistrationDates", () => {
     assert.equal(findings[0].kind, "end");
   });
 
+  it("recovers submission-labeled ranges with MEDIUM confidence", () => {
+    const { startDate, endDate, findings } = extractRegistrationDates(
+      [
+        "Session 1: Online Submission of Application Form",
+        "31 October 2025 to 27 November 2025 (Up to 09:00 P.M.).",
+        "Last date for successful transaction of prescribed Application Fee",
+        "27 November 2025 (Up to 11:50 P.M.).",
+      ].join(" "),
+      CTX
+    );
+    assert.equal(iso(startDate), "2025-10-31T00:00:00.000Z");
+    assert.equal(iso(endDate), "2025-11-27T00:00:00.000Z");
+    const start = findings.find((f) => f.kind === "start");
+    assert.equal(start.confidence, "MEDIUM");
+    assert.match(start.excerpt, /Submission of Application Form/);
+    assert.ok(start.evidence);
+  });
+
+  it("ignores exam-session dates beside a submission range", () => {
+    const { startDate, endDate } = extractRegistrationDates(
+      [
+        "Online Submission of Application Form 31 October 2025 to 27 November 2025.",
+        "5.3 Schedule of Examination: Session 1: Between 21 January 2026 and 30 January 2026.",
+      ].join(" "),
+      CTX
+    );
+    assert.equal(iso(startDate), "2025-10-31T00:00:00.000Z");
+    assert.equal(iso(endDate), "2025-11-27T00:00:00.000Z");
+  });
+
+  it("leaves vague submission windows without parseable dates UNKNOWN", () => {
+    const { startDate, endDate, findings } = extractRegistrationDates(
+      "Online Submission of Application Form Last week of January 2026 Onwards.",
+      CTX
+    );
+    assert.equal(startDate, null);
+    assert.equal(endDate, null);
+    assert.deepEqual(findings, []);
+  });
+
+  it("keeps competing submission ranges ambiguous instead of guessing", () => {
+    const { startDate, endDate, findings } = extractRegistrationDates(
+      [
+        "Online Submission of Application Form 31 October 2025 to 27 November 2025.",
+        "Online Submission of Application Form 02 February 2026 to 02 March 2026.",
+      ].join(" "),
+      CTX
+    );
+    assert.equal(startDate, null);
+    assert.equal(endDate, null);
+    assert.ok(findings.some((f) => f.ambiguous));
+  });
+
+  it("does not let schedule-only ranges fill empty fields", () => {
+    const { startDate, endDate } = extractRegistrationDates(
+      "Schedule of Examination: Session 1: Between 21 January 2026 and 30 January 2026.",
+      CTX
+    );
+    assert.equal(startDate, null);
+    assert.equal(endDate, null);
+  });
+
   it("holds no exam-specific literals in generic date extraction", () => {
     const code = fs.readFileSync(
       path.join(__dirname, "..", "extractors", "registrationDates.js"),

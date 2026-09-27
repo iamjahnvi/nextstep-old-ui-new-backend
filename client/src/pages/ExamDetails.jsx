@@ -92,6 +92,58 @@ function examTypeLabel(value) {
     return found ? found.label : value || "—";
 }
 
+// -----------------------------------------------------------------------------
+// Nullable-eligibility display (flexible-eligibility redesign).
+// Backend null means "no confirmed value" — never render a fabricated
+// requirement ("All streams", "Science", "Other"). Human-readable fallbacks:
+// -----------------------------------------------------------------------------
+function educationLabel(value) {
+    if (value === undefined || value === null || value === "") return null;
+    if (value === "Graduate" || value === "Post-Graduate" || value === "Doctorate") return value;
+    return `Class ${value}+`;
+}
+
+function ageLabel(value) {
+    if (value === undefined || value === null || value === "") return null;
+    return `${value} years`;
+}
+
+function sourceBadge(source) {
+    if (source === "MANUAL") return "Manual";
+    if (source === "SCRAPER") return "Scraper";
+    if (source === "SEED") return "Dataset";
+    return null;
+}
+
+// Extended common eligibility fields worth showing when a record carries
+// them. Key = backend path under exam.eligibility, label = human row label.
+const EXTENDED_ELIGIBILITY_ROWS = [
+    ["requiredQualification", "Required qualification"],
+    ["qualifyingExam", "Qualifying exam"],
+    ["degreeRequirements", "Degree requirements"],
+    ["yearOfStudy", "Year of study"],
+    ["graduationYear", "Graduation year"],
+    ["attemptsAllowed", "Attempts allowed"],
+    ["nationality", "Nationality"],
+    ["domicile", "Domicile"],
+    ["workExperience", "Work experience"],
+    ["professionalRegistration", "Professional registration"],
+    ["institutionRequirement", "Institution requirement"],
+    ["genderEligibility", "Gender eligibility"],
+    ["ageRelaxation", "Age relaxation"],
+    ["categoryRelaxation", "Category relaxation"],
+    ["otherEligibility", "Other eligibility"],
+];
+
+function formatEligibilityValue(value) {
+    if (value === undefined || value === null || value === "") return null;
+    if (Array.isArray(value)) {
+        const items = value.filter((v) => typeof v === "string" && v.trim() !== "");
+        return items.length > 0 ? items.join(", ") : null;
+    }
+    return String(value);
+}
+
 function statusMeta(status) {
     if (status === "Open") return { label: "Registration Open", pill: "Registration Open", cls: "open" };
     if (status === "Opening Soon") return { label: "Upcoming", pill: "Upcoming", cls: "upcoming" };
@@ -239,12 +291,10 @@ function ExamDetails() {
     const meta = statusMeta(status);
     const isSaved = Boolean(savedMap[exam._id]);
     const pct = completeness(user?.profile);
-    const classLabel = exam.minimumEducationLevel
-        ? `Class ${exam.minimumEducationLevel}+`
-        : "All classes";
+    const classLabel = educationLabel(exam.minimumEducationLevel) || "No education requirement";
     const streamLabel = Array.isArray(exam.streams) && exam.streams.length > 0
         ? exam.streams.join(" · ")
-        : "All streams";
+        : "No stream requirement";
 
     const toggleSaved = () => {
         setSavedMap((prev) => {
@@ -386,25 +436,35 @@ function ExamDetails() {
                                 <p className="ed-info__value">
                                     {Array.isArray(exam.streams) && exam.streams.length > 0
                                         ? exam.streams.join(", ")
-                                        : "—"}
+                                        : "No stream requirement specified"}
                                 </p>
                             </div>
                             <div className="ed-info">
                                 <p className="ed-info__label">Minimum Education Level</p>
                                 <p className="ed-info__value">
-                                    {exam.minimumEducationLevel
-                                        ? `Class ${exam.minimumEducationLevel}`
-                                        : "—"}
+                                    {educationLabel(exam.minimumEducationLevel) ||
+                                        "No minimum education specified"}
                                 </p>
                             </div>
                             <div className="ed-info">
                                 <p className="ed-info__label">Minimum Percentage</p>
                                 <p className="ed-info__value">
-                                    {exam.eligibility?.minimumPercentage ?? "Not specified"}
+                                    {exam.eligibility?.minimumPercentage ?? "No minimum percentage specified"}
                                     {exam.eligibility?.minimumPercentage != null ? "%" : ""}
                                 </p>
                             </div>
-                            <div className="ed-info" />
+                            <div className="ed-info">
+                                <p className="ed-info__label">Minimum Age</p>
+                                <p className="ed-info__value">
+                                    {ageLabel(exam.minimumAge) || "No minimum age specified"}
+                                </p>
+                            </div>
+                            <div className="ed-info">
+                                <p className="ed-info__label">Maximum Age</p>
+                                <p className="ed-info__value">
+                                    {ageLabel(exam.maximumAge) || "No maximum age specified"}
+                                </p>
+                            </div>
                             <div className="ed-info ed-info--full">
                                 <p className="ed-info__label">Subjects</p>
                                 {Array.isArray(exam.subjects) && exam.subjects.length > 0 ? (
@@ -416,11 +476,43 @@ function ExamDetails() {
                                         ))}
                                     </div>
                                 ) : (
-                                    <p className="ed-info__value">—</p>
+                                    <p className="ed-info__value">No subject requirement specified</p>
                                 )}
                             </div>
+                            {EXTENDED_ELIGIBILITY_ROWS.filter(
+                                ([key]) => formatEligibilityValue(exam.eligibility?.[key]) !== null
+                            ).map(([key, label]) => (
+                                <div className="ed-info" key={key}>
+                                    <p className="ed-info__label">{label}</p>
+                                    <p className="ed-info__value">
+                                        {formatEligibilityValue(exam.eligibility?.[key])}
+                                    </p>
+                                </div>
+                            ))}
                         </div>
                     </section>
+
+                    {Array.isArray(exam.customEligibility) && exam.customEligibility.length > 0 && (
+                        <section className="ed-card" aria-label="Additional eligibility criteria">
+                            <h2 className="ed-card__title">Additional Criteria</h2>
+                            <p className="ed-card__sub">Further requirements for this exam</p>
+                            <div className="ed-info-grid">
+                                {exam.customEligibility.map((criterion) => (
+                                    <div className="ed-info" key={criterion.key}>
+                                        <p className="ed-info__label">
+                                            {criterion.label}
+                                            {sourceBadge(criterion.source) && (
+                                                <span className="ed-tag" style={{ marginLeft: 8 }}>
+                                                    {sourceBadge(criterion.source)}
+                                                </span>
+                                            )}
+                                        </p>
+                                        <p className="ed-info__value">{criterion.value}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    )}
 
                     <section className="ed-card" aria-label="Registration details">
                         <h2 className="ed-card__title">Registration Details</h2>
@@ -476,7 +568,7 @@ function ExamDetails() {
                         <div className="ed-rail__row">
                             <span className="ed-rail__label">Minimum education</span>
                             <span className="ed-rail__val">
-                                {exam.minimumEducationLevel ? `Class ${exam.minimumEducationLevel}` : "—"}
+                                {educationLabel(exam.minimumEducationLevel) || "—"}
                             </span>
                         </div>
                         <div className="ed-rail__row">

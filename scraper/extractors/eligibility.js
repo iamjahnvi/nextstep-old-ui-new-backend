@@ -15,6 +15,19 @@
 // engine below only matches configured phrases and records configured
 // canonical values. No vocab configured -> the axis stays UNKNOWN; values
 // outside the configured vocab are never guessed.
+// PRECISION GATES (conservative extraction — an UNKNOWN beats a wrong KNOWN):
+//   - education signals count only inside an ELIGIBILITY-axis section or near
+//     an explicit requirement relationship (must/passed/completed/eligible
+//     ...). Paper titles, abbreviation glossaries, and notices-list link text
+//     ("Paper 1 (B.E./B.Tech.)") carry none of these, so degree abbreviations
+//     there no longer fabricate a minimum-education bar.
+//   - subject "with X, Y and Z" lists are skipped inside illustrative example
+//     contexts ("for example", "if a candidate has ..."). Examples of a
+//     candidate's history are not requirements.
+//   - percentage matches tied to admission TO a named institution/system
+//     ("admission to NIT+ System", counselling, seat allotment) are skipped:
+//     downstream admission criteria are not generic exam eligibility. A bare
+//     "seeking admission this year" (no institution) still extracts.
 //   - education minLevel: "8" | "10" | "12" | "Graduate" | "Post-Graduate" |
 //     "Doctorate". Multi-category rule (generic): every distinct signaled
 //     level is collected. ONE distinct level -> KNOWN (the single-category
@@ -77,6 +90,36 @@ const EDUCATION_SIGNALS = [
 ];
 
 const APPEARING_RE = /\b(appearing|appeared)\b.{0,60}\b(candidates?|students?|applicants?)\b.{0,60}\b(eligible|apply|appear)\b|\bfinal\s+year\b.{0,40}\beligible\b/i;
+
+// Requirement relationship: words that tie a nearby degree/class mention to
+// an actual eligibility rule (as opposed to a paper title, glossary entry,
+// or link label that merely names a degree).
+const REQUIREMENT_CONTEXT_RE =
+  /\bmust\b|\bhave\b|\bhas\b|\bhaving\b|\bholds?\b|\bholding\b|\bpassed\b|\bpassing\b|\bpass\b|\bcompleted?\b|\bobtained?\b|\brequire\b|\brequires\b|\brequired\b|\brequirement\b|\beligib\w*|\bqualif\w*|\badmission\b|\badmit\b|\bappl(y|ied|icants?)\b|\bminimum\b|\bat least\b|\bshould\b|\bshall\b|\bcriteria\b|\bstudying\b|\benrolled\b|\bappear\b/i;
+
+const REQUIREMENT_CONTEXT_CHARS = 200;
+const REQUIREMENT_FOLLOW_CHARS = 120;
+
+// Illustrative example markers: a subject list introduced as an example of
+// one candidate's history ("For example, if a candidate has passed Class XII
+// with Physics, ...") states no requirement.
+const EXAMPLE_CONTEXT_RE =
+  /\bfor example\b|\bfor instance\b|\be\.g\.|\bsuch as\b|\bsuppose\b|\billustrat\w*|\bsample\b|\bif a candidate (has|have|had)\b/i;
+
+const EXAMPLE_CONTEXT_CHARS = 200;
+
+// Downstream-admission markers: a percentage tied to admission TO a named
+// institution/system, counselling, or seat allotment is an admission rule,
+// not generic exam eligibility. Note the capital after "admission to": a
+// bare "seeking admission this year" (no institution) still extracts.
+const ADMISSION_CONTEXT_RE =
+  /\badmission\s+to\s+[A-Z]|\bcounsell?ing\b|\bseat\s+(allocation|allotment)\b|\ballotment\b/i;
+
+const ADMISSION_CONTEXT_CHARS = 250;
+
+function contextAround(collapsed, index, chars) {
+  return collapsed.slice(Math.max(0, index - chars), index);
+}
 
 const PERCENTAGE_RES = [
   // Minimum/at-least figure anchored to marks within the same clause.
@@ -200,15 +243,31 @@ function extractEligibility(text, ctx = {}, vocab = {}) {
     }
   }
   const { kept: cleanLevels } = filterEducationMatches(collapsed, rawLevels);
+  const sections = detectSections(collapsed);
   const matchedLevels = [];
   const seenLevels = new Set();
   for (const entry of cleanLevels) {
-    if (!seenLevels.has(entry.level)) {
-      seenLevels.add(entry.level);
-      matchedLevels.push(entry);
-    }
+    if (seenLevels.has(entry.level)) continue;
+    // Requirement-context gate: paper titles, abbreviation glossaries, and
+    // notices-list link text name degrees without stating any rule. A signal
+    // counts only inside an ELIGIBILITY-axis section or near an explicit
+    // requirement relationship — otherwise it is dropped, never guessed from.
+    const home = sectionAt(entry.index, sections);
+    const inEligibilitySection = home !== null && home.axis === "ELIGIBILITY";
+    // Bidirectional: requirement verbs may precede ("must have passed Class
+    // XII") or follow ("Senior Secondary examination passed") the signal.
+    const nearby =
+      contextAround(collapsed, entry.index, REQUIREMENT_CONTEXT_CHARS) +
+      " " +
+      collapsed.slice(
+        entry.index + entry.length,
+        entry.index + entry.length + REQUIREMENT_FOLLOW_CHARS
+      );
+    if (!inEligibilitySection && !REQUIREMENT_CONTEXT_RE.test(nearby)) continue;
+    seenLevels.add(entry.level);
+    matchedLevels.push(entry);
   }
-  const sections = detectSections(collapsed);
+  // (sections already computed above for the lone-match confidence below.)
   const sectionNameAt = (index) => {
     const section = sectionAt(index, sections);
     return section ? section.name : null;
@@ -264,22 +323,35 @@ function extractEligibility(text, ctx = {}, vocab = {}) {
   }
 
   // --- percentage ----------------------------------------------------------
+  // Every match is walked (not just the first): a percentage tied to
+  // admission TO a named institution/system is skipped as a downstream
+  // admission rule, and scanning continues for a genuine exam-wide figure.
   for (const re of PERCENTAGE_RES) {
-    const match = re.exec(collapsed);
-    if (match) {
-      const value = Number(match[1]);
-      if (validPercentage(value)) {
-        eligibility.percentage = {
-          min: value,
-          status: "KNOWN",
-          evidence: buildEvidence(base, {
-            confidence: "MEDIUM",
-            excerpt: windowAround(collapsed, match.index),
-          }),
-        };
-        break;
+    const global = new RegExp(
+      re.source,
+      re.flags.includes("g") ? re.flags : `${re.flags}g`
+    );
+    let match = null;
+    while ((match = global.exec(collapsed)) !== null) {
+      if (match[0].length === 0) {
+        global.lastIndex += 1;
+        continue;
       }
+      const value = Number(match[1]);
+      if (!validPercentage(value)) continue;
+      const nearby = contextAround(collapsed, match.index, ADMISSION_CONTEXT_CHARS);
+      if (ADMISSION_CONTEXT_RE.test(nearby)) continue;
+      eligibility.percentage = {
+        min: value,
+        status: "KNOWN",
+        evidence: buildEvidence(base, {
+          confidence: "MEDIUM",
+          excerpt: windowAround(collapsed, match.index),
+        }),
+      };
+      break;
     }
+    if (eligibility.percentage.status === "KNOWN") break;
   }
 
   // --- age -----------------------------------------------------------------
@@ -389,10 +461,20 @@ function extractEligibility(text, ctx = {}, vocab = {}) {
     const altGroup = `(?:${subjectAlts.join("|")})`;
     const listRe = new RegExp(
       `with\\s+(${altGroup}(?:\\s*(?:,|and|&)\\s*${altGroup})*)`,
-      "i"
+      "gi"
     );
-    const subjectMatch = listRe.exec(collapsed);
-    if (subjectMatch) {
+    // Every "with X, Y and Z" list is walked (not just the first): lists
+    // inside illustrative example contexts ("For example, if a candidate has
+    // passed Class XII with ...") describe one candidate's history, not a
+    // requirement, and are skipped while scanning continues.
+    let subjectMatch = null;
+    while ((subjectMatch = listRe.exec(collapsed)) !== null) {
+      if (subjectMatch[0].length === 0) {
+        listRe.lastIndex += 1;
+        continue;
+      }
+      const nearby = contextAround(collapsed, subjectMatch.index, EXAMPLE_CONTEXT_CHARS);
+      if (EXAMPLE_CONTEXT_RE.test(nearby)) continue;
       const names = [];
       const seen = new Set();
       const tokenRe = new RegExp(subjectAlts.join("|"), "gi");
@@ -413,6 +495,7 @@ function extractEligibility(text, ctx = {}, vocab = {}) {
             excerpt: windowAround(collapsed, subjectMatch.index),
           }),
         };
+        break;
       }
     }
   }

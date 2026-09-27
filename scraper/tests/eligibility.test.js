@@ -166,6 +166,93 @@ describe("Phase 5 — extractEligibility", () => {
     assert.equal(eligibility.percentage.min, null);
   });
 
+  it("ignores degree abbreviations in paper titles and glossaries", () => {
+    // Paper-title / notices-list / abbreviation-list mentions name a degree
+    // without stating any eligibility rule — they must not fabricate a bar.
+    for (const text of [
+      "Declaration of the Result for Paper 1 (B.E. / B.Tech.). View Final Answer Keys here.",
+      "LIST OF ABBREVIATIONS B. Tech. Bachelor of Technology B.E. Bachelor of Engineering",
+      "Syllabus for Paper 2A (B. Arch) and Paper 2B (B. Planning) is available.",
+    ]) {
+      const eligibility = extractEligibility(text, CTX, TEST_VOCAB);
+      assert.equal(eligibility.education.status, "UNKNOWN", text);
+      assert.equal(eligibility.education.minLevel, null, text);
+    }
+  });
+
+  it("still extracts genuine graduate requirements", () => {
+    const eligibility = extractEligibility(
+      "Candidates must have completed a Bachelor's degree in Engineering from a recognized university.",
+      CTX,
+      TEST_VOCAB
+    );
+    assert.equal(eligibility.education.status, "KNOWN");
+    assert.equal(eligibility.education.minLevel, "Graduate");
+  });
+
+  it("ignores illustrative candidate-history subject examples", () => {
+    // The example states one candidate's history ("For example, if a
+    // candidate has passed ... with ..."), not a requirement — and it even
+    // names Mathematics outside the matched list, proving the list is not
+    // the rule.
+    const eligibility = extractEligibility(
+      [
+        "Passing year means the year of first pass in Class XII.",
+        "For example, if a candidate has passed Class XII with Physics, Chemistry and Biology subjects",
+        "in the year 2023 and further passed Class XII in Mathematics in the year 2024,",
+        "then year 2023 counts for appearing.",
+      ].join(" "),
+      CTX,
+      TEST_VOCAB
+    );
+    assert.equal(eligibility.subjects.status, "UNKNOWN");
+    assert.equal(eligibility.subjects.requiredAny, null);
+  });
+
+  it("ignores sample combinations while keeping genuine requirements", () => {
+    const sample = extractEligibility(
+      "Sample combinations from last year include Physics with Chemistry and Biology.",
+      CTX,
+      TEST_VOCAB
+    );
+    assert.equal(sample.subjects.status, "UNKNOWN");
+    const genuine = extractEligibility(
+      "Eligibility requires Class XII with Physics, Chemistry and Mathematics as core subjects.",
+      CTX,
+      TEST_VOCAB
+    );
+    assert.equal(genuine.subjects.status, "KNOWN");
+    assert.deepEqual(genuine.subjects.requiredAny, ["Physics", "Chemistry", "Mathematics"]);
+  });
+
+  it("ignores institution-specific admission percentages", () => {
+    // Conditional downstream admission rule (with category variants and an
+    // OR-branch): not a generic exam minimum. Staged source documents remain
+    // the evidence of record; the normalized generic value stays null.
+    const eligibility = extractEligibility(
+      [
+        "Eligibility for Admission to NIT+ System: candidates seeking admission to NIT+ System",
+        "must have passed class XII and secured at least 75% aggregate marks of five subjects.",
+      ].join(" "),
+      CTX,
+      TEST_VOCAB
+    );
+    assert.equal(eligibility.percentage.status, "UNKNOWN");
+    assert.equal(eligibility.percentage.min, null);
+  });
+
+  it("still extracts genuine exam-wide minimum percentages", () => {
+    for (const text of [
+      "A minimum of 75% marks in aggregate is required.",
+      "A minimum of 75% marks in aggregate is required for general category candidates seeking admission this year.",
+      "Candidates must have secured at least 75% aggregate marks.",
+    ]) {
+      const eligibility = extractEligibility(text, CTX, TEST_VOCAB);
+      assert.equal(eligibility.percentage.status, "KNOWN", text);
+      assert.equal(eligibility.percentage.min, 75, text);
+    }
+  });
+
   it("leaves everything UNKNOWN on empty input", () => {
     assert.deepEqual(statuses(extractEligibility("", CTX)), {
       education: "UNKNOWN",

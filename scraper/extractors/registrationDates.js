@@ -10,8 +10,12 @@
 //   - HIGH confidence: an explicit start/end label (e.g. "Registration Start
 //     Date", "Last date of application") with a parseable date ≤250 chars
 //     after the label.
-//   - MEDIUM confidence: a "from <date> to <date>" / "between <date> and
-//     <date>" range within a registration/application/admission context.
+//   - MEDIUM confidence: a submission-labeled range ("Online Submission of
+//     Application Form <date> to <date>" — bulletins that timetable the
+//     window without "start/closing" verbs) or a "from <date> to <date>" /
+//     "between <date> and <date>" range within a registration/application/
+//     admission context. New labeled-range rules arrive MEDIUM (not HIGH) so
+//     review still sees the pick.
 //   - REVISED dates: when several distinct dates compete for one field, an
 //     explicitly revision-linked replacement ("last date extended till X",
 //     "revised schedule: registration begins Y") wins with its revision
@@ -69,7 +73,27 @@ const RANGE_RE = new RegExp(
   "i"
 );
 
+// Submission-labeled ranges: bulletins that timetable the window as
+// "Online Submission of Application Form <date> to <date>" carry an explicit
+// label but no start/close verb, so the labeled-date rules never fire. The
+// label + an explicit date-to-date range is adopted directly (MEDIUM —
+// positional linkage, so review still sees the pick). Vague windows without
+// parseable dates ("Last week of January 2026 onwards") never match.
+const SUBMISSION_RANGE_RE = new RegExp(
+  `(?:online\\s+)?submission\\s+of\\s+(?:application|registration)(?:\\s+form)?[^.]{0,120}?(${DATE_ATOM})\\s+to\\s+(${DATE_ATOM})`,
+  "gi"
+);
+
 const CONTEXT_RE = /regist|applic|admission|online\s+form|important\s+dates|schedule/i;
+
+// Range-fallback context: the bare from/between fallback must sit near a
+// registration-family word. Pure exam-schedule context ("Schedule of
+// Examination ... Between <exam dates>") describes sittings, not the
+// application window, and adopting it once nulled a genuine end date via a
+// contradictory pair — so "schedule"/"important dates" alone no longer
+// qualify here (bareExtension keeps the wider CONTEXT_RE: fee-deadline
+// extensions legitimately live under schedule tables).
+const RANGE_CONTEXT_RE = /regist|applic|admission|online\s+form/i;
 
 // Revision verbs that can supersede an earlier date. Generic administrative
 // phrasing only — no exam-specific terms. A verb alone never selects a date:
@@ -277,6 +301,27 @@ function bareExtension(collapsed) {
   return out;
 }
 
+// Explicit submission-labeled ranges ("Online Submission of Application
+// Form <date> to <date>"). Returns { start: [...], end: [...] } entries
+// carrying their own MEDIUM confidence (see resolveKind/add below).
+function collectSubmissionRanges(collapsed) {
+  const start = [];
+  const end = [];
+  SUBMISSION_RANGE_RE.lastIndex = 0;
+  let match;
+  while ((match = SUBMISSION_RANGE_RE.exec(collapsed)) !== null) {
+    const first = parseDateCandidate(match[1]);
+    const second = parseDateCandidate(match[2]);
+    if (first && second) {
+      const excerpt = windowAround(collapsed, match.index);
+      start.push({ date: first, excerpt, confidence: "MEDIUM" });
+      end.push({ date: second, excerpt, confidence: "MEDIUM" });
+    }
+    if (match.index === SUBMISSION_RANGE_RE.lastIndex) SUBMISSION_RANGE_RE.lastIndex += 1;
+  }
+  return { start, end };
+}
+
 // Resolve one field from labeled candidates + statement-derived replacements.
 // Single distinct date -> adopted. Several distinct dates -> the single
 // statement-derived date wins when there is exactly one; otherwise UNKNOWN
@@ -292,9 +337,11 @@ function resolveKind(labeled, stated) {
         excerpts: [],
         fromStatement: false,
         // A fresh slot opens at the sighting's own strength: plain labeled
-        // dates HIGH, revision-cluster picks MEDIUM. Later sightings never
-        // downgrade it (statement sightings may still upgrade it below).
-        confidence: fromStatement ? "HIGH" : confidence,
+        // dates HIGH, revision-cluster picks MEDIUM. An entry carrying its
+        // own explicit confidence (submission-labeled ranges) keeps it.
+        // Later sightings never downgrade it (statement sightings may still
+        // upgrade it below).
+        confidence: fromStatement ? "HIGH" : entry.confidence || confidence,
         statementExcerpt: null,
       });
     }
@@ -362,6 +409,9 @@ function extractRegistrationDates(text, ctx = {}) {
   if (collapsed) {
     const startLabeled = collectLabeled(collapsed, START_LABEL_RE);
     const endLabeled = collectLabeled(collapsed, END_LABEL_RE);
+    const submissionRanges = collectSubmissionRanges(collapsed);
+    startLabeled.push(...submissionRanges.start);
+    endLabeled.push(...submissionRanges.end);
     const startStated = linkedReplacements(collapsed, START_STATEMENT_LABEL);
     const endStated = [
       ...linkedReplacements(collapsed, END_STATEMENT_LABEL),
@@ -407,18 +457,20 @@ function extractRegistrationDates(text, ctx = {}) {
       });
     }
 
-    // MEDIUM fallback: explicit "from <date> to <date>" range in context,
-    // only for fields with no candidates at all (never over ambiguity).
-    if (startHit === null || endHit === null) {
-      const noStartCandidates =
-        startLabeled.length === 0 && startStated.length === 0;
-      const noEndCandidates = endLabeled.length === 0 && endStated.length === 0;
-      if (noStartCandidates || noEndCandidates) {
-        const range = RANGE_RE.exec(collapsed);
-        if (range) {
-          const before = collapsed.slice(Math.max(0, range.index - 300), range.index);
-          const after = collapsed.slice(range.index, range.index + 400);
-          if (CONTEXT_RE.test(before) || CONTEXT_RE.test(after)) {
+  // MEDIUM fallback: explicit "from <date> to <date>" range in a
+  // registration-family context, only for fields with no candidates at all
+  // (never over ambiguity). Pure exam-schedule context does NOT qualify
+  // (see RANGE_CONTEXT_RE): sittings are not the application window.
+  if (startHit === null || endHit === null) {
+    const noStartCandidates =
+      startLabeled.length === 0 && startStated.length === 0;
+    const noEndCandidates = endLabeled.length === 0 && endStated.length === 0;
+    if (noStartCandidates || noEndCandidates) {
+      const range = RANGE_RE.exec(collapsed);
+      if (range) {
+        const before = collapsed.slice(Math.max(0, range.index - 300), range.index);
+        const after = collapsed.slice(range.index, range.index + 400);
+        if (RANGE_CONTEXT_RE.test(before) || RANGE_CONTEXT_RE.test(after)) {
             const first = parseDateCandidate(range[1] || range[3]);
             const second = parseDateCandidate(range[2] || range[4]);
             if (first && second) {
