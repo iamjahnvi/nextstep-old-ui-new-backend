@@ -125,23 +125,29 @@ The matching layer should use explicit eligibility bounds wherever available. Fo
 
 ## How NextStep works
 
-```mermaid
+<CodeBlock language="mermaid" editable>
 flowchart TD
-    A["Student creates a profile"] --> B["NextStep reads education level, stream, subjects and interests"]
-    B --> C["Backend matches the profile against exam records"]
-    C --> D["Student sees relevant exams and official links"]
-    E["n8n runs on a schedule or webhook"] --> F["Collect official notices and pages"]
-    F --> G["Extract and normalise exam information"]
-    G --> H["Validate required fields, dates, eligibility and duplicates"]
-    H --> I{"Record trustworthy and complete?"}
-    I -- "Yes" --> J["Send candidate to controlled backend update"]
-    I -- "No / conflict" --> K["Mark for review; do not silently publish"]
-    J --> L["Verified exam records and source evidence"]
-    L --> C
-    L --> M["Check for changes and approaching deadlines"]
-    M --> N["Create relevant notification event"]
-    N --> O["Student reviews the update"]
-```
+    A["Schedule Trigger"] --> B["Load configured source list"]
+    B --> C["Fetch source content"]
+    C --> D{"Fetch successful?"}
+    D -- "No" --> E["Retry within limit"]
+    E --> F{"Retry succeeded?"}
+    F -- "No" --> G["Log failure and alert maintainer"]
+    F -- "Yes" --> H["Extract fields"]
+    D -- "Yes" --> H
+    H --> I["Normalise dates and labels"]
+    I --> J["Validate schema and evidence"]
+    J --> K{"Valid candidate?"}
+    K -- "No" --> L["Needs review queue"]
+    K -- "Yes" --> M["Check duplicates and changes"]
+    M --> N{"New or materially changed?"}
+    N -- "No" --> O["Record unchanged check"]
+    N -- "Yes" --> P["Send to protected NextStep API"]
+    P --> Q{"API accepted?"}
+    Q -- "No" --> R["Log response and retry safely"]
+    Q -- "Yes" --> S["Record update outcome"]
+    S --> T["Create notification event if warranted"]
+</CodeBlock>
 
 The student experience and the automation lifecycle are connected, but they have different responsibilities: the student-facing application handles discovery and saved records, while n8n handles scheduled orchestration and repeatable operational steps.
 
