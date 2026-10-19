@@ -125,33 +125,26 @@ The matching layer should use explicit eligibility bounds wherever available. Fo
 
 ## How NextStep works
 
-<CodeBlock language="mermaid" editable>
+
+```mermaid
 flowchart TD
-    A["Schedule Trigger"] --> B["Load configured source list"]
-    B --> C["Fetch source content"]
-    C --> D{"Fetch successful?"}
-    D -- "No" --> E["Retry within limit"]
-    E --> F{"Retry succeeded?"}
-    F -- "No" --> G["Log failure and alert maintainer"]
-    F -- "Yes" --> H["Extract fields"]
-    D -- "Yes" --> H
-    H --> I["Normalise dates and labels"]
-    I --> J["Validate schema and evidence"]
-    J --> K{"Valid candidate?"}
-    K -- "No" --> L["Needs review queue"]
-    K -- "Yes" --> M["Check duplicates and changes"]
-    M --> N{"New or materially changed?"}
-    N -- "No" --> O["Record unchanged check"]
-    N -- "Yes" --> P["Send to protected NextStep API"]
-    P --> Q{"API accepted?"}
-    Q -- "No" --> R["Log response and retry safely"]
-    Q -- "Yes" --> S["Record update outcome"]
-    S --> T["Create notification event if warranted"]
-</CodeBlock>
+    A["Student creates profile"] --> B["NextStep matches student eligibility"]
+    B --> C["Relevant exams displayed to student"]
 
-The student experience and the automation lifecycle are connected, but they have different responsibilities: the student-facing application handles discovery and saved records, while n8n handles scheduled orchestration and repeatable operational steps.
+    D["n8n scheduled trigger"] --> E["Collect official exam notices"]
+    E --> F["Extract exam names, dates and eligibility"]
+    F --> G{"Data valid and verified?"}
 
----
+    G -->|Yes| H["Send data to NextStep backend"]
+    H --> I["Save exam record in database"]
+    I --> J["Monitor official sources for changes"]
+    J --> K["Notify students about verified updates"]
+
+    G -->|No| L["Flag record for human review"]
+    L --> M["Do not publish unverified details"]
+
+    I --> B
+```
 
 ## Why n8n
 
