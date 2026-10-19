@@ -880,7 +880,6 @@ Contributions should improve reliability and preserve the product's scope.
 ## Project links
 
 - **Repository:** [iamjahnvi/nextstep-old-ui-new-backend](https://github.com/iamjahnvi/nextstep-old-ui-new-backend)
-- **Reference README structure:** [4-thkind/RaktDoot](https://github.com/4-thkind/RaktDoot)
 - **Automation platform:** [n8n documentation](https://docs.n8n.io/)
 
 ---
