@@ -191,12 +191,11 @@ async function discoverFromSeed(seed, options = {}) {
 }
 
 function mergeEvidence(stored, incoming) {
-  const seen = new Set(
-    (stored.evidence || []).map((e) => `${e.seedId}|${e.matchedUrl}|${e.matchedText}`)
-  );
+  const evidenceKey = (e) => `${e.seedId}|${e.matchedUrl}|${e.matchedText}|${e.searchQuery || ""}`;
+  const seen = new Set((stored.evidence || []).map(evidenceKey));
   let added = false;
   for (const entry of incoming.evidence || []) {
-    const key = `${entry.seedId}|${entry.matchedUrl}|${entry.matchedText}`;
+    const key = evidenceKey(entry);
     if (!seen.has(key)) {
       stored.evidence.push(entry);
       seen.add(key);

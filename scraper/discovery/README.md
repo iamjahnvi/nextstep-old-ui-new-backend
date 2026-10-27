@@ -105,6 +105,35 @@ documentType, relevanceScore, matchedSignals, discoveredAt, depth` — the
 answer to "why was this discovered?". Discovered documents are **not**
 authority-verified and carry **no** extracted exam fields.
 
+## Phase 1 — OpenSERP discovery
+
+`discovery/openSerpProvider.js` adds OpenSERP as an opt-in candidate discovery
+provider. It issues Node.js HTTP requests to `/duck/search` and does not crawl
+result pages. Results are normalized to the existing candidate plus evidence
+shape (title, result URL/domain, snippet, query, engine, rank, timestamp, and
+original result metadata), then persisted only through `saveCandidates()`.
+Candidates start at `DISCOVERED`; rank, snippet, HTTPS, and government-looking
+domains never promote or verify a source. The optional
+`discoverVerifyAndProfileFromOpenSerp()` persists first and then delegates to
+the existing `applyVerification()` and `profileCandidate()` paths. Verification
+review rules and the candidate/source-profile collections remain unchanged.
+
+Configuration (OpenSERP stays disabled unless explicitly enabled):
+
+| Environment variable | Default | Behavior |
+|---|---|---|
+| `OPENSERP_ENABLED` | `false` | Enable with `true`, `1`, `yes`, or `on` |
+| `OPENSERP_BASE_URL` | `http://127.0.0.1:7000` | OpenSERP origin; HTTP(S) only |
+| `OPENSERP_QUERY_LIMIT` | `5` | Maximum number of supplied queries (cap 100) |
+| `OPENSERP_RESULTS_PER_QUERY` | `5` | Requested and retained results per query (cap 50) |
+| `OPENSERP_TIMEOUT_MS` | `5000` | Per-request timeout (cap 60000) |
+
+Existing candidate IDs and normalized result URLs are excluded before
+persistence; duplicate IDs/URLs within the run are also collapsed. Per-query
+connection errors, timeouts, HTTP 429s, malformed JSON, and unrecognized
+response shapes do not abort other discovery queries. Candidate evidence is
+schema-compatible and remains separate from verification evidence.
+
 ## What Steps 2–4 do NOT do
 
 Candidate crawling for content, adapter generation, PDF/Docling/OCR/Python/LLM

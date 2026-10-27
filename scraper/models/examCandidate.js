@@ -51,6 +51,11 @@ const discoveryEvidenceSchema = new mongoose.Schema(
     matchedUrl: { type: String, default: null },
     matchedPattern: { type: String, required: true, trim: true },
     retrievedAt: { type: Date, required: true },
+    searchQuery: { type: String, default: null },
+    searchEngine: { type: String, default: null },
+    rank: { type: Number, default: null },
+    snippet: { type: String, default: null },
+    resultMetadata: { type: mongoose.Schema.Types.Mixed, default: null },
   },
   { _id: false }
 );
