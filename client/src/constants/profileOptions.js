@@ -22,7 +22,6 @@ export const EDUCATION_LEVEL_OPTIONS = [
 ];
 
 export const SUBJECT_OPTIONS = [
-    "Science",
     "Physics",
     "Chemistry",
     "Mathematics",

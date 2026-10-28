@@ -7,9 +7,6 @@
 //   stay distinguishable from scraper/seed data.
 // DB: none. Schema validation via validateSync() and pure helper calls only.
 // RUN: npm test (node --test tests/)
-// -----------------------------------------------------------------------------
-// ADDED: Coverage for the "Science" subject option added to SUBJECT_OPTIONS.
-// -----------------------------------------------------------------------------
 // =============================================================================
 
 const { describe, it } = require("node:test");
@@ -25,7 +22,6 @@ const {
     userMatchesExamSubjects,
     isEligibleForExam,
     filterEligibleExams,
-    canonicalizeSubject,
 } = require("../utils/eligibility");
 const {
     applyManualEligibility,
@@ -317,59 +313,5 @@ describe("flexible eligibility — manual edits & custom criteria", () => {
         assert.equal(doc.streams, null);
         assert.equal(doc.subjects, null);
         assert.notDeepEqual(doc.streams, []);
-    });
-
-it("14. Science subject is selectable and matches exam subjects", () => {
-        // "Science" is now in SUBJECT_OPTIONS; canonicalizeSubject returns "science"
-        // (lowercased, not in alias map so passes through).
-        assert.equal(canonicalizeSubject("Science"), "science");
-        assert.equal(canonicalizeSubject("science"), "science");
-
-        // user with "Science" subject matches exam requiring "Science"
-        assert.equal(
-            userMatchesExamSubjects(["Science"], {
-                streams: null,
-                subjects: ["Science"],
-            }),
-            true
-        );
-
-        // user with "Science" matches exam with "Science" in composite subject
-        assert.equal(
-            userMatchesExamSubjects(["Science"], {
-                streams: null,
-                subjects: ["Science/Physics"],
-            }),
-            true
-        );
-
-        // user with "Science" does NOT match exam requiring "Physics" only
-        assert.equal(
-            userMatchesExamSubjects(["Science"], {
-                streams: null,
-                subjects: ["Physics"],
-            }),
-            false
-        );
-
-        // user with no subjects still passes (never excluded)
-        assert.equal(
-            userMatchesExamSubjects([], {
-                streams: null,
-                subjects: ["Science"],
-            }),
-            true
-        );
-    });
-
-    it("15. Science subject is stored separately from stream", () => {
-        // Verify the distinction: stream: "Science" vs subjects: ["Science"]
-        const { normalizeStream, normalizeUserSubjects } = require("../utils/eligibility.js");
-        // stream "Science" normalizes to canonical stream
-        assert.equal(normalizeStream("Science"), "Science");
-        // subjects "Science" normalizes to ["Science"] (stays as-is since not in alias map)
-        assert.deepEqual(normalizeUserSubjects(["Science"]), ["Science"]);
-        // They remain separate values
-        assert.notDeepEqual(normalizeStream("Science"), normalizeUserSubjects(["Science"]));
     });
 });
