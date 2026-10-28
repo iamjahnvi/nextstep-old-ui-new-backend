@@ -13,6 +13,7 @@ import FilterSelect from "../components/FilterSelect";
 import ProfileMenu from "../components/ProfileMenu";
 import ThemeToggle from "../components/ThemeToggle";
 import { useTheme } from "../lib/useTheme";
+import { avatarInitialFor } from "../lib/avatarInitial";
 import "./MainPage.css";
 
 // -----------------------------------------------------------------------------
@@ -578,7 +579,9 @@ function MainPage() {
     // ---- profile bits --------------------------------------------------------------
     const profile = user?.profile || null;
     const complete = isProfileComplete(profile);
+    const pct = completeness(profile);
     const displayName = user?.name ? user.name.split(" ")[0] : "there";
+    const avatarInitial = avatarInitialFor(user);
     const streamLine = profile?.stream
         ? `${profile.educationLevel ? educationLabel(profile.educationLevel) : "Student"} • ${profile.stream} Stream`
         : "Complete your profile";
@@ -586,13 +589,36 @@ function MainPage() {
     const quickActive = quickCareer.length + quickExam.length + quickMonths.length;
 
     const renderExamCard = (exam) => {
+        const tint = careerTint(exam.careerType);
         const meta = statusMeta(exam.status);
         const isSaved = Boolean(savedMap[exam._id]);
+        const chips = [];
+        if (exam.minimumEducationLevel !== undefined && exam.minimumEducationLevel !== null) {
+            const level = exam.minimumEducationLevel;
+            chips.push(
+                level === "Graduate" || level === "Post-Graduate" || level === "Doctorate"
+                    ? level
+                    : `Class ${level}`
+            );
+        }
+        if (Array.isArray(exam.streams) && exam.streams.length > 0) chips.push(exam.streams[0]);
         return (
             <article key={exam._id} className="dx-card">
+                <div className="dx-card-icon" style={{ background: tint }} aria-hidden="true">
+                    <span className="dx-card-mono">{examInitials(exam)}</span>
+                </div>
                 <div className="dx-card-main">
                     <h3 className="dx-card-title">{exam.name}</h3>
                     {exam.fullForm && <p className="dx-card-sub">{exam.fullForm}</p>}
+                    {chips.length > 0 && (
+                        <div className="dx-chips">
+                            {chips.map((chip) => (
+                                <span key={chip} className="dx-chip">
+                                    {chip}
+                                </span>
+                            ))}
+                        </div>
+                    )}
                 </div>
                 <div className="dx-card-side">
                     <div className="dx-side__top">
@@ -762,6 +788,7 @@ function MainPage() {
                                 <img className="dx-profile__photo" src={user.avatar} alt={`${user.name}'s profile photo`} />
                             ) : (
                                 <span className="dx-profile__photo dx-profile__photo--fallback" aria-hidden="true">
+                                    {avatarInitial}
                                 </span>
                             )}
                             <div>
