@@ -300,12 +300,8 @@ function Profile() {
     };
 
     const profile = user?.profile || null;
-    const pct = completeness(profile);
-    const RING_C = 2 * Math.PI * 56;
-
     const displayName = user?.name || "Student";
     const firstName = displayName.split(" ")[0] || "Student";
-    const avatarInitial = avatarInitialFor(user);
     const todayInputValue = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
     const filteredSubjects = useMemo(() => {
@@ -483,7 +479,7 @@ function Profile() {
                     <span className="pf-bell__dot" aria-hidden="true" />
                 </button>
                 <ThemeToggle theme={theme} onToggle={toggleTheme} />
-                <ProfileMenu completeness={pct} />
+                <ProfileMenu onSelectView={switchView} />
                 </div>
                 </div>
             </header>
@@ -512,7 +508,6 @@ function Profile() {
                                     {user?.avatar ? (
                                         <img src={user.avatar} alt="" />
                                     ) : (
-                                        avatarInitial
                                     )}
                                 </span>
                                 <button
@@ -525,7 +520,7 @@ function Profile() {
                                     <span aria-hidden="true">+</span>
                                     {photoBusy ? "Uploading…" : user?.avatar ? "Change photo" : "Add photo"}
                                 </button>
-                                <span className="pf-photo__pct">{pct}%</span>
+                                
                             </div>
                             <input
                                 ref={photoInputRef}
@@ -573,26 +568,23 @@ function Profile() {
                     </div>
 
                     <div className="pf-strength" aria-label="Profile strength">
-                        <div className="pf-strength__row">
+<div className="pf-strength__row">
                             <span className="pf-strength__icon" aria-hidden="true">
                                 <IconChart />
                             </span>
                             <span>Complete your profile</span>
-                            <span className="pf-boost">↑ {pct}%</span>
                         </div>
                         <div className="pf-strength__row">
                             <span className="pf-strength__icon" aria-hidden="true">
                                 <IconDoc />
                             </span>
                             <span>Add academic details</span>
-                            <span className="pf-boost">↑ 10%</span>
                         </div>
                         <div className="pf-strength__row">
                             <span className="pf-strength__icon" aria-hidden="true">
                                 <IconMedal />
                             </span>
-                            <span>Add certifications &amp; achievements</span>
-                            <span className="pf-boost">↑ 5%</span>
+                            <span>Add certifications & achievements</span>
                         </div>
                         <button
                             type="button"
@@ -625,22 +617,8 @@ function Profile() {
                                     {label}
                                 </button>
                             ))}
-                        </nav>
+</nav>
 
-                        <div className="pf-quote">
-                            <p>Small steps today, big dreams tomorrow.</p>
-                            <div
-                                className="pf-quote__bar"
-                                role="img"
-                                aria-label={`Profile ${pct}% complete`}
-                            >
-                                <span style={{ width: `${pct}%` }} />
-                            </div>
-                            <p className="pf-quote__pct">{pct}% complete</p>
-                        </div>
-                    </aside>
-
-                    {/* ---- academic details ---- */}
                     <main className="pf-main">
                         <form
                             ref={academicRef}
@@ -910,7 +888,6 @@ function Profile() {
                     </button>
                 ))}
                 <span className="pf-avatar pf-avatar--sm" aria-hidden="true">
-                    {avatarInitial}
                 </span>
             </nav>
         </div>

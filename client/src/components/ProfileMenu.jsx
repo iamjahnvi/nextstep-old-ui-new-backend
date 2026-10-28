@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
-import { avatarInitialFor } from "../lib/avatarInitial";
 import "./ProfileMenu.css";
 
 // -----------------------------------------------------------------------------
@@ -15,8 +14,6 @@ import "./ProfileMenu.css";
 //   onSelectView — optional MainPage view switcher (used for Settings there);
 //     when absent, Settings simply returns to the main hub.
 // -----------------------------------------------------------------------------
-
-const RING_C = 2 * Math.PI * 32;
 
 const FAQS = [
     {
@@ -80,18 +77,15 @@ function IconLogout() {
     );
 }
 
-function ProfileMenu({ completeness = 0, onSelectView }) {
+function ProfileMenu({ onSelectView }) {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
     const [open, setOpen] = useState(false);
     const [faqOpen, setFaqOpen] = useState(false);
     const rootRef = useRef(null);
 
-    const initial = avatarInitialFor(user);
     const displayName = user?.name?.trim() || "Student";
-    const profileLine =
-        user?.profile?.stream ||
-        (completeness >= 100 ? "Profile complete" : "Complete your profile");
+    const profileLine = user?.profile?.stream || "Complete your profile";
 
     useEffect(() => {
         if (!open) return;
@@ -130,31 +124,16 @@ function ProfileMenu({ completeness = 0, onSelectView }) {
                 aria-label={`Account menu for ${displayName}`}
                 onClick={() => setOpen((prev) => !prev)}
             >
-                {user?.avatar ? <img src={user.avatar} alt="" /> : initial}
+                {user?.avatar ? <img src={user.avatar} alt="" /> : null}
             </button>
 
             {open && (
                 <div className="pfm-panel" role="menu" aria-label="Account">
                     <div className="pfm-head">
-                        <div className="pfm-photo">
-                            <svg width="76" height="76" viewBox="0 0 76 76" aria-hidden="true">
-                                <circle cx="38" cy="38" r="32" fill="none" stroke="#edf0f4" strokeWidth="5" />
-                                <circle
-                                    cx="38"
-                                    cy="38"
-                                    r="32"
-                                    fill="none"
-                                    stroke="#2f7cf6"
-                                    strokeWidth="5"
-                                    strokeLinecap="round"
-                                    strokeDasharray={`${(completeness / 100) * RING_C} ${RING_C}`}
-                                    transform="rotate(-90 38 38)"
-                                />
-                            </svg>
+<div className="pfm-photo">
                             <span className="pfm-photo__face" aria-hidden="true">
                                 {user?.avatar ? <img src={user.avatar} alt="" /> : initial}
                             </span>
-                            <span className="pfm-photo__pct">{completeness}%</span>
                         </div>
                         <div className="pfm-head__text">
                             <p className="pfm-name">{displayName}</p>
