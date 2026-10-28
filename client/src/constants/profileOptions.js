@@ -2,6 +2,7 @@ export const STREAM_OPTIONS = [
     "Science",
     "Commerce",
     "Arts/Humanities",
+    "No stream allotted",
 ];
 
 export const GENDER_OPTIONS = [

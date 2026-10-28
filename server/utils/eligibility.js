@@ -19,7 +19,7 @@
 
 const { normalizeEducationLevel, getEducationRank } = require("./educationLevels");
 
-const CANONICAL_STREAMS = ["Science", "Commerce", "Arts/Humanities"];
+const CANONICAL_STREAMS = ["Science", "Commerce", "Arts/Humanities", "No stream allotted"];
 
 // Matches exam stream entries that mean "open to every stream", including the
 // variants present in the actual dataset. Entries with extra qualifiers in
