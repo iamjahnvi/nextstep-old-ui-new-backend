@@ -507,7 +507,8 @@ function Profile() {
                                 <span className="pf-photo__face" aria-hidden="true">
                                     {user?.avatar ? (
                                         <img src={user.avatar} alt="" />
-                                    ) : null}
+                                    ) : (
+                                    )}
                                 </span>
                                 <button
                                     type="button"
