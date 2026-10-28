@@ -222,10 +222,8 @@ function Login() {
                 // Establish the shared session (JWT + /auth/me hydration)
                 // before entering the authenticated hub.
                 await login(response.data.token);
+                navigate("/main");
             }
-            // WHY: removed the original alert() success popup; we navigate to the
-            //   main hub directly to indicate a successful login.
-            navigate("/main");
         } catch (error) {
             // WHY: replaced alert() with an inline error banner for clarity/UX.
             const data = error.response?.data || {};
