@@ -51,6 +51,7 @@ function completeness(profile) {
     return Math.round((filled / parts.length) * 100);
 }
 
+// ISO date (YYYY-MM-DD) for <input type="date"> value / min / max bounds.
 function toDateInputValue(value) {
     if (!value) return "";
     const date = new Date(value);
@@ -615,254 +616,262 @@ function Profile() {
                                     {label}
                                 </button>
                             ))}
-                        </nav>
+</nav>
 
-                        <main className="pf-main">
-                            <form
-                                ref={academicRef}
-                                className={`pf-academic${flashAcademic ? " pf-flash" : ""}`}
-                                onSubmit={handleSubmit}
-                                autoComplete="off"
-                            >
-                                <div className="pf-academic__head">
-                                    <div className="pf-academic__title">
-                                        <span className="pf-section-icon pf-section-icon--blue" aria-hidden="true">
-                                            <IconCap />
-                                        </span>
-                                        <div>
-                                            <h2>Academic Details</h2>
-                                            <p>
-                                                Help us understand your academic background so we can
-                                                suggest the best exams for you.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {errors._form && (
-                                    <div className="pf-form-error" role="alert">
-                                        {errors._form}
-                                    </div>
-                                )}
-
-                                <section className="pf-section pf-section--lilac" aria-label="Date of birth">
-                                    <span className="pf-section-icon" aria-hidden="true">
-                                        <IconCalendar />
-                                    </span>
-                                    <div className="pf-section__body">
-                                        <h3>Date of Birth</h3>
-                                        <p>Pick your date of birth from the calendar — we derive your age from it.</p>
-                                        <div className="pf-input-wrap">
-                                            <input
-                                                type="date"
-                                                name="dateOfBirth"
-                                                value={formData.dateOfBirth}
-                                                min="1900-01-01"
-                                                max={todayInputValue}
-                                                onChange={handleChange}
-                                                autoComplete="off"
-                                                aria-describedby="pf-dob-error"
-                                            />
-                                        </div>
-                                        {errors.dateOfBirth && (
-                                            <p className="pf-field-error" id="pf-dob-error">
-                                                {errors.dateOfBirth}
-                                            </p>
-                                        )}
-                                    </div>
-                                </section>
-
-                                <section className="pf-section pf-section--lavender" aria-label="Gender">
-                                    <span className="pf-section-icon" aria-hidden="true">
-                                        <IconUser />
-                                    </span>
-                                    <div className="pf-section__body">
-                                        <h3>Gender</h3>
-                                        <p>Select the option that best describes you.</p>
-                                        <div className="pf-pills" role="radiogroup" aria-label="Gender">
-                                            {GENDER_OPTIONS.map((gender) => (
-                                                <button
-                                                    key={gender}
-                                                    type="button"
-                                                    role="radio"
-                                                    aria-checked={formData.gender === gender}
-                                                    className={`pf-pill${formData.gender === gender ? " is-selected" : ""}`}
-                                                    onClick={() =>
-                                                        setFormData((prev) => ({ ...prev, gender }))
-                                                    }
-                                                >
-                                                    {gender}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </section>
-
-                                <section className="pf-section pf-section--mint" aria-label="Percentage">
-                                    <span className="pf-section-icon" aria-hidden="true">
-                                        <IconPercent />
-                                    </span>
-                                    <div className="pf-section__body">
-                                        <h3>Percentage</h3>
-                                        <p>Enter your current percentage (or last available percentage).</p>
-                                        <div className="pf-input-wrap">
-                                            <input
-                                                type="number"
-                                                name="percentage"
-                                                placeholder="e.g. 95"
-                                                min="0"
-                                                max="100"
-                                                step="any"
-                                                value={formData.percentage}
-                                                onChange={handleChange}
-                                                autoComplete="off"
-                                                required
-                                                aria-describedby="pf-percentage-error"
-                                            />
-                                            <span aria-hidden="true">%</span>
-                                        </div>
-                                        {errors.percentage && (
-                                            <p className="pf-field-error" id="pf-percentage-error">
-                                                {errors.percentage}
-                                            </p>
-                                        )}
-                                    </div>
-                                </section>
-
-                                <section className="pf-section pf-section--peach" aria-label="Stream">
-                                    <span className="pf-section-icon" aria-hidden="true">
-                                        <IconBook />
-                                    </span>
-                                    <div className="pf-section__body">
-                                        <h3>Stream</h3>
-                                        <p>Choose your stream.</p>
-                                        <div className="pf-pills" role="radiogroup" aria-label="Stream">
-                                            {STREAM_OPTIONS.map((stream) => (
-                                                <button
-                                                    key={stream}
-                                                    type="button"
-                                                    role="radio"
-                                                    aria-checked={formData.stream === stream}
-                                                    className={`pf-pill${formData.stream === stream ? " is-selected" : ""}`}
-                                                    onClick={() =>
-                                                        setFormData((prev) => ({ ...prev, stream }))
-                                                    }
-                                                >
-                                                    {stream}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </section>
-
-                                <section className="pf-section pf-section--lavender" aria-label="Education level">
-                                    <span className="pf-section-icon" aria-hidden="true">
+                    <main className="pf-main">
+                        <form
+                            ref={academicRef}
+                            className={`pf-academic${flashAcademic ? " pf-flash" : ""}`}
+                            onSubmit={handleSubmit}
+                            autoComplete="off"
+                        >
+                            <div className="pf-academic__head">
+                                <div className="pf-academic__title">
+                                    <span className="pf-section-icon pf-section-icon--blue" aria-hidden="true">
                                         <IconCap />
                                     </span>
-                                    <div className="pf-section__body">
-                                        <h3>Maximum Education Level</h3>
-                                        <p>Select the highest level of education you have completed or are currently pursuing.</p>
-                                        <label className="pf-select">
-                                            <span className="pf-sr">Education level</span>
-                                            <select
-                                                name="educationLevel"
-                                                value={formData.educationLevel}
-                                                onChange={handleChange}
-                                                required
-                                            >
-                                                <option value="">Select education level</option>
-                                                {EDUCATION_LEVEL_OPTIONS.map(({ value, label }) => (
-                                                    <option key={value} value={value}>
-                                                        {label}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </label>
+                                    <div>
+                                        <h2>Academic Details</h2>
+                                        <p>
+                                            Help us understand your academic background so we can
+                                            suggest the best exams for you.
+                                        </p>
                                     </div>
-                                </section>
+                                </div>
+                                <p className="pf-doodle" aria-hidden="true">
+                                    Your goals matter
+                                    <svg width="90" height="26" viewBox="0 0 90 26" fill="none">
+                                        <path d="M80 4C60 10 30 12 12 8M12 8l6-1M12 8l1 6" stroke="#8a97ab" strokeWidth="1.6" strokeLinecap="round" />
+                                        <path d="M4 22c6-5 10 3 16-1s10 3 16-1 8 2 14 0" stroke="#2f7cf6" strokeWidth="1.6" strokeLinecap="round" />
+                                    </svg>
+                                </p>
+                            </div>
 
-                                <section className="pf-section pf-section--sky" aria-label="Subjects">
-                                    <span className="pf-section-icon" aria-hidden="true">
-                                        <IconLayers />
-                                    </span>
-                                    <div className="pf-section__body">
-                                        <h3>Subjects</h3>
-                                        <p>Select the subjects you are interested in or have studied.</p>
-                                        <div className="pf-subjectbox">
-                                            <input
-                                                type="text"
-                                                placeholder="Search and select subjects"
-                                                value={subjectQuery}
-                                                aria-label="Search and select subjects"
-                                                onChange={(e) => {
-                                                    setSubjectQuery(e.target.value);
-                                                    setSubjectOpen(true);
-                                                }}
-                                                onFocus={() => setSubjectOpen(true)}
-                                                onBlur={() => {
-                                                    // Delay so option mousedown fires first.
-                                                    setTimeout(() => setSubjectOpen(false), 120);
-                                                }}
-                                            />
-                                            <span className="pf-subjectbox__chev" aria-hidden="true">
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                                    <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-                                                </svg>
-                                            </span>
-                                            {subjectOpen && (
-                                                <ul className="pf-subjectlist" role="listbox" aria-label="Available subjects">
-                                                    {filteredSubjects.length === 0 ? (
-                                                        <li className="pf-subjectlist__empty" aria-hidden="true">
-                                                            No matches — try another search.
+                            {errors._form && (
+                                <div className="pf-form-error" role="alert">
+                                    {errors._form}
+                                </div>
+                            )}
+
+                            <section className="pf-section pf-section--lilac" aria-label="Date of birth">
+                                <span className="pf-section-icon" aria-hidden="true">
+                                    <IconCalendar />
+                                </span>
+                                <div className="pf-section__body">
+                                    <h3>Date of Birth</h3>
+                                    <p>Pick your date of birth from the calendar — we derive your age from it.</p>
+                                    <div className="pf-input-wrap">
+                                        <input
+                                            type="date"
+                                            name="dateOfBirth"
+                                            value={formData.dateOfBirth}
+                                            min="1900-01-01"
+                                            max={todayInputValue}
+                                            onChange={handleChange}
+                                            autoComplete="off"
+                                            aria-describedby="pf-dob-error"
+                                        />
+                                    </div>
+                                    {errors.dateOfBirth && (
+                                        <p className="pf-field-error" id="pf-dob-error">
+                                            {errors.dateOfBirth}
+                                        </p>
+                                    )}
+                                </div>
+                            </section>
+
+                            <section className="pf-section pf-section--lavender" aria-label="Gender">
+                                <span className="pf-section-icon" aria-hidden="true">
+                                    <IconUser />
+                                </span>
+                                <div className="pf-section__body">
+                                    <h3>Gender</h3>
+                                    <p>Select the option that best describes you.</p>
+                                    <div className="pf-pills" role="radiogroup" aria-label="Gender">
+                                        {GENDER_OPTIONS.map((gender) => (
+                                            <button
+                                                key={gender}
+                                                type="button"
+                                                role="radio"
+                                                aria-checked={formData.gender === gender}
+                                                className={`pf-pill${formData.gender === gender ? " is-selected" : ""}`}
+                                                onClick={() =>
+                                                    setFormData((prev) => ({ ...prev, gender }))
+                                                }
+                                            >
+                                                {gender}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section className="pf-section pf-section--mint" aria-label="Percentage">
+                                <span className="pf-section-icon" aria-hidden="true">
+                                    <IconPercent />
+                                </span>
+                                <div className="pf-section__body">
+                                    <h3>Percentage</h3>
+                                    <p>Enter your current percentage (or last available percentage).</p>
+                                    <div className="pf-input-wrap">
+                                        <input
+                                            type="number"
+                                            name="percentage"
+                                            placeholder="e.g. 95"
+                                            min="0"
+                                            max="100"
+                                            step="any"
+                                            value={formData.percentage}
+                                            onChange={handleChange}
+                                            autoComplete="off"
+                                            required
+                                            aria-describedby="pf-percentage-error"
+                                        />
+                                        <span aria-hidden="true">%</span>
+                                    </div>
+                                    {errors.percentage && (
+                                        <p className="pf-field-error" id="pf-percentage-error">
+                                            {errors.percentage}
+                                        </p>
+                                    )}
+                                </div>
+                            </section>
+
+                            <section className="pf-section pf-section--peach" aria-label="Stream">
+                                <span className="pf-section-icon" aria-hidden="true">
+                                    <IconBook />
+                                </span>
+                                <div className="pf-section__body">
+                                    <h3>Stream</h3>
+                                    <p>Choose your stream.</p>
+                                    <div className="pf-pills" role="radiogroup" aria-label="Stream">
+                                        {STREAM_OPTIONS.map((stream) => (
+                                            <button
+                                                key={stream}
+                                                type="button"
+                                                role="radio"
+                                                aria-checked={formData.stream === stream}
+                                                className={`pf-pill${formData.stream === stream ? " is-selected" : ""}`}
+                                                onClick={() =>
+                                                    setFormData((prev) => ({ ...prev, stream }))
+                                                }
+                                            >
+                                                {stream}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section className="pf-section pf-section--lavender" aria-label="Education level">
+                                <span className="pf-section-icon" aria-hidden="true">
+                                    <IconCap />
+                                </span>
+                                <div className="pf-section__body">
+                                    <h3>Maximum Education Level</h3>
+                                    <p>Select the highest level of education you have completed or are currently pursuing.</p>
+                                    <label className="pf-select">
+                                        <span className="pf-sr">Education level</span>
+                                        <select
+                                            name="educationLevel"
+                                            value={formData.educationLevel}
+                                            onChange={handleChange}
+                                            required
+                                        >
+                                            <option value="">Select education level</option>
+                                            {EDUCATION_LEVEL_OPTIONS.map(({ value, label }) => (
+                                                <option key={value} value={value}>
+                                                    {label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                </div>
+                            </section>
+
+                            <section className="pf-section pf-section--sky" aria-label="Subjects">
+                                <span className="pf-section-icon" aria-hidden="true">
+                                    <IconLayers />
+                                </span>
+                                <div className="pf-section__body">
+                                    <h3>Subjects</h3>
+                                    <p>Select the subjects you are interested in or have studied.</p>
+                                    <div className="pf-subjectbox">
+                                        <input
+                                            type="text"
+                                            placeholder="Search and select subjects"
+                                            value={subjectQuery}
+                                            aria-label="Search and select subjects"
+                                            onChange={(e) => {
+                                                setSubjectQuery(e.target.value);
+                                                setSubjectOpen(true);
+                                            }}
+                                            onFocus={() => setSubjectOpen(true)}
+                                            onBlur={() => {
+                                                // Delay so option mousedown fires first.
+                                                setTimeout(() => setSubjectOpen(false), 120);
+                                            }}
+                                        />
+                                        <span className="pf-subjectbox__chev" aria-hidden="true">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                                <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                        </span>
+                                        {subjectOpen && (
+                                            <ul className="pf-subjectlist" role="listbox" aria-label="Available subjects">
+                                                {filteredSubjects.length === 0 ? (
+                                                    <li className="pf-subjectlist__empty" aria-hidden="true">
+                                                        No matches — try another search.
+                                                    </li>
+                                                ) : (
+                                                    filteredSubjects.map((subject) => (
+                                                        <li key={subject} role="option" aria-selected="false">
+                                                            <button
+                                                                type="button"
+                                                                onMouseDown={(e) => e.preventDefault()}
+                                                                onClick={() => addSubject(subject)}
+                                                            >
+                                                                {subject}
+                                                            </button>
                                                         </li>
-                                                    ) : (
-                                                        filteredSubjects.map((subject) => (
-                                                            <li key={subject} role="option" aria-selected="false">
-                                                                <button
-                                                                    type="button"
-                                                                    onMouseDown={(e) => e.preventDefault()}
-                                                                    onClick={() => addSubject(subject)}
-                                                                >
-                                                                    {subject}
-                                                                </button>
-                                                            </li>
-                                                        ))
-                                                    )}
-                                                </ul>
-                                            )}
-                                        </div>
-                                        {subjects.length > 0 && (
-                                            <div className="pf-chips">
-                                                {subjects.map((subject) => (
-                                                    <span key={subject} className="pf-chip">
-                                                        {subject}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => removeSubject(subject)}
-                                                            aria-label={`Remove ${subject}`}
-                                                        >
-                                                            ×
-                                                        </button>
-                                                    </span>
-                                                ))}
-                                            </div>
+                                                    ))
+                                                )}
+                                            </ul>
                                         )}
                                     </div>
-                                </section>
-
-                                <button type="submit" className="pf-btn-dark" disabled={saving}>
-                                    {saving ? "Saving…" : (
-                                        <>
-                                            Save changes <span aria-hidden="true">→</span>
-                                        </>
+                                    {subjects.length > 0 && (
+                                        <div className="pf-chips">
+                                            {subjects.map((subject) => (
+                                                <span key={subject} className="pf-chip">
+                                                    {subject}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeSubject(subject)}
+                                                        aria-label={`Remove ${subject}`}
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
                                     )}
-                                </button>
-                            </form>
-                        </main>
-                    </aside>
+                                </div>
+                            </section>
+
+                            <button type="submit" className="pf-btn-dark" disabled={saving}>
+                                {saving ? "Saving…" : (
+                                    <>
+                                        Save changes <span aria-hidden="true">→</span>
+                                    </>
+                                )}
+                            </button>
+                        </form>
+                    </main>
                 </div>
             </div>
+        </aside>
 
+            {/* ---- mobile bottom nav (as in the reference) ---- */}
             <nav className="pf-bottomnav" aria-label="Primary mobile">
                 <span className="pf-bottomnav__brand">
                     <span className="pf-brand__mark pf-brand__mark--sm">N</span>
@@ -882,6 +891,27 @@ function Profile() {
                 </span>
             </nav>
         </div>
+    </aside>
+
+            {/* ---- mobile bottom nav (as in the reference) ---- */}
+            <nav className="pf-bottomnav" aria-label="Primary mobile">
+                <span className="pf-bottomnav__brand">
+                    <span className="pf-brand__mark pf-brand__mark--sm">N</span>
+                    NextStep
+                </span>
+                {["Discover", "My Matches", "Saved", "Resources"].map((label, index) => (
+                    <button
+                        key={label}
+                        type="button"
+                        className={index === 0 ? "is-active" : ""}
+                        onClick={goMain}
+                    >
+                        {label}
+                    </button>
+                ))}
+                <span className="pf-avatar pf-avatar--sm" aria-hidden="true">
+                </span>
+            </nav>
     );
 }
 
