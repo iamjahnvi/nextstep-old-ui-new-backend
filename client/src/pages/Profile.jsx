@@ -869,7 +869,6 @@ function Profile() {
                     </main>
                 </div>
             </div>
-        </aside>
 
             {/* ---- mobile bottom nav (as in the reference) ---- */}
             <nav className="pf-bottomnav" aria-label="Primary mobile">
@@ -891,27 +890,6 @@ function Profile() {
                 </span>
             </nav>
         </div>
-    </aside>
-
-            {/* ---- mobile bottom nav (as in the reference) ---- */}
-            <nav className="pf-bottomnav" aria-label="Primary mobile">
-                <span className="pf-bottomnav__brand">
-                    <span className="pf-brand__mark pf-brand__mark--sm">N</span>
-                    NextStep
-                </span>
-                {["Discover", "My Matches", "Saved", "Resources"].map((label, index) => (
-                    <button
-                        key={label}
-                        type="button"
-                        className={index === 0 ? "is-active" : ""}
-                        onClick={goMain}
-                    >
-                        {label}
-                    </button>
-                ))}
-                <span className="pf-avatar pf-avatar--sm" aria-hidden="true">
-                </span>
-            </nav>
     );
 }
 
