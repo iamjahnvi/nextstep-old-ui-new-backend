@@ -83,6 +83,7 @@ const examMatchesStream = (examStreams, userStream) => {
 // Canonical school subjects (lowercased) matching the profile form options,
 // plus aliases for spelling variants used in the exam dataset.
 const SUBJECT_ALIAS_TO_CANONICAL = {
+    science: "science",
     physics: "physics",
     chemistry: "chemistry",
     mathematics: "mathematics",
